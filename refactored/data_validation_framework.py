@@ -1,5 +1,4 @@
 import pandas as pd
-import dask.dataframe as dd
 import numpy as np
 import os
 import ast
@@ -178,14 +177,18 @@ class DataRetriever:
                 return table.to_pandas()
             except Exception as e:
                 self.log.warning(f"PyArrow CSV reading failed, falling back to Dask: {str(e)}")
-                # Fall back to Dask for out-of-memory situations
-                ddf = dd.read_csv(
-                    file_name, 
-                    delimiter=delimiter,
-                    header=0 if header_columns_value else None,
-                    assume_missing=True
-                )
-                return ddf.compute()
+                try:
+                    import dask.dataframe as dd  # Lazy import to avoid heavy dependency at startup
+                    ddf = dd.read_csv(
+                        file_name,
+                        delimiter=delimiter,
+                        header=0 if header_columns_value else None,
+                        assume_missing=True
+                    )
+                    return ddf.compute()
+                except Exception as dask_error:
+                    self.log.error(f"Dask CSV reading failed: {dask_error}")
+                    raise
         
         # Standard CSV reading for smaller files
         if header_columns_value:
