@@ -2,12 +2,21 @@ from enum import Enum
 import os
 import keyring
 
+
+def _get_secret(env_var: str, keyring_name: str):
+    """Retrieve secrets from environment variables or keyring."""
+    env_val = os.getenv(env_var)
+    if env_val is not None:
+        return env_val
+    try:
+        return keyring.get_password('system', keyring_name)
+    except Exception:
+        return None
+
 class Creds(Enum):
-    """
-    Secure storage for database credentials
-    Retrieves credentials from environment variables or keyring
-    """
-    db_username = os.getenv('DB_USERNAME') or keyring.get_password('system', 'db_username')
-    db_password = os.getenv('DB_PASSWORD') or keyring.get_password('system', 'db_password')
-    snowflake_user = os.getenv('SNOWFLAKE_USER') or keyring.get_password('system', 'snowflake_user')
-    snowflake_password = os.getenv('SNOWFLAKE_PASSWORD') or keyring.get_password('system', 'snowflake_password')
+    """Secure storage for database credentials."""
+
+    db_username = _get_secret('DB_USERNAME', 'db_username')
+    db_password = _get_secret('DB_PASSWORD', 'db_password')
+    snowflake_user = _get_secret('SNOWFLAKE_USER', 'snowflake_user')
+    snowflake_password = _get_secret('SNOWFLAKE_PASSWORD', 'snowflake_password')
