@@ -85,6 +85,8 @@ secret*
 *credential*
 .snowflake-creds
 *auth*
+!dataqe_app/auth/
+!dataqe_app/auth/**
 *password*
 *token*
 *.pem
