@@ -126,4 +126,6 @@ def create_app():
     @app.route('/users/new', methods=['GET', 'POST'], endpoint='new_user')
     @app.route('/users/new', methods=['GET', 'POST'], endpoint='main.new_user')
     def placeholder_new_user():
-        return app
+        return render_template('placeholder.html', title='New User')
+
+    return app
