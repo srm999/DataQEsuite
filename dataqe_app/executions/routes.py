@@ -105,3 +105,8 @@ def download_log(execution_id):
             download_name=filename.replace('.xlsx', '.txt'),
             mimetype='text/plain'
         )
+
+# Additional endpoints expected by templates
+executions_bp.add_url_rule('/execution/<int:execution_id>', endpoint='execution_detail', view_func=execution_detail)
+executions_bp.add_url_rule('/executions', endpoint='execution_history', view_func=execution_history)
+executions_bp.add_url_rule('/execution/<int:execution_id>/download_log', endpoint='download_log', view_func=download_log)
