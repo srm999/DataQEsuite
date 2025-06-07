@@ -71,7 +71,11 @@ def fill_nulls_and_blanks(df: pd.DataFrame, fill_value: Any = 0) -> pd.DataFrame
         pd.DataFrame: DataFrame with nulls and blanks filled
     """
     try:
-        pd.set_option('future.no_silent_downcasting', True)
+        try:
+            pd.set_option('future.no_silent_downcasting', True)
+        except Exception:
+            # Option only available in newer pandas versions
+            pass
         # Create a copy to avoid modifying the original
         df_filled = df.copy()
         
