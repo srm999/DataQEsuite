@@ -103,61 +103,29 @@ def create_app():
     def placeholder_results_dashboard():
         return render_template("results_dashboard.html")
 
-    # Placeholder routes for template endpoints
-    @app.route('/project/<int:project_id>', endpoint='project_detail')
-    @app.route('/project/<int:project_id>', endpoint='main.project_detail')
+    @app.route('/projects/<int:project_id>', endpoint='project_detail')
+    @app.route('/projects/<int:project_id>', endpoint='main.project_detail')
     def placeholder_project_detail(project_id):
-        return f"Project detail placeholder for {project_id}"
+        return render_template('placeholder.html', title='Project Detail')
 
-    @app.route('/team/<int:team_id>', endpoint='team_detail')
+    @app.route('/teams/<int:team_id>', endpoint='team_detail')
     def placeholder_team_detail(team_id):
-        return f"Team detail placeholder for {team_id}"
+        return render_template('placeholder.html', title='Team Detail')
 
     @app.route('/testcase/<int:testcase_id>', endpoint='testcase_detail')
+    @app.route('/testcase/<int:testcase_id>', endpoint='main.testcase_detail')
     @app.route('/testcase/<int:testcase_id>', endpoint='testcases.testcase_detail')
     def placeholder_testcase_detail(testcase_id):
-        return f"Testcase detail placeholder for {testcase_id}"
+        return render_template('placeholder.html', title='Testcase Detail')
 
-    @app.route('/user/<int:user_id>/edit', methods=['GET', 'POST'], endpoint='edit_user')
-    @app.route('/user/<int:user_id>/edit', methods=['GET', 'POST'], endpoint='main.edit_user')
+    @app.route('/users/<int:user_id>/edit', methods=['GET', 'POST'], endpoint='edit_user')
+    @app.route('/users/<int:user_id>/edit', methods=['GET', 'POST'], endpoint='main.edit_user')
     def placeholder_edit_user(user_id):
-        return f"Edit user placeholder for {user_id}"
+        return render_template('placeholder.html', title='Edit User')
 
     @app.route('/users/new', methods=['GET', 'POST'], endpoint='new_user')
     @app.route('/users/new', methods=['GET', 'POST'], endpoint='main.new_user')
     def placeholder_new_user():
-        return "New user placeholder"
 
-    @app.route('/project/<int:project_id>/teams/new', methods=['GET', 'POST'], endpoint='new_team')
-    def placeholder_new_team(project_id):
-        return f"New team placeholder for project {project_id}"
-
-    @app.route('/project/<int:project_id>/connections/new', methods=['GET', 'POST'], endpoint='new_connection')
-    def placeholder_new_connection(project_id):
-        return f"New connection placeholder for project {project_id}"
-
-    @app.route('/team/<int:team_id>/members/add', methods=['POST'], endpoint='add_team_member')
-    def placeholder_add_team_member(team_id):
-        return f"Add team member placeholder for team {team_id}"
-
-    @app.route('/team/<int:team_id>/members/<int:user_id>/remove', methods=['POST'], endpoint='remove_team_member')
-    def placeholder_remove_team_member(team_id, user_id):
-        return f"Remove team member placeholder for team {team_id} user {user_id}"
-
-    @app.route('/testcase/<int:testcase_id>/download/<source_or_target>', endpoint='download_testcase_file')
-    def placeholder_download_testcase_file(testcase_id, source_or_target):
-        return f"Download {source_or_target} file placeholder for testcase {testcase_id}"
-
-    @app.route('/execution/<int:execution_id>/download_log_file', endpoint='download_log_file')
-    def placeholder_download_log_file(execution_id):
-        return f"Download log file placeholder for execution {execution_id}"
-
-    @app.route('/testcase/<int:test_case_id>/execute', methods=['POST'], endpoint='execute_test')
-    def placeholder_execute_test(test_case_id):
-        return f"Execute test placeholder for testcase {test_case_id}"
-
-    @app.route('/testcase/<int:testcase_id>/execute/ui', endpoint='execute_testcase_ui')
-    def placeholder_execute_testcase_ui(testcase_id):
-        return f"Execute testcase UI placeholder for {testcase_id}"
 
     return app
