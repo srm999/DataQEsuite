@@ -1,0 +1,643 @@
+{% extends "base.html" %}
+
+{% block title %}Test Case Details - DataQE Suite{% endblock %}
+
+{% block style %}
+<style>
+    .log-output {
+        max-height: 400px;
+        overflow-y: auto;
+        background-color: #f8f9fa;
+        padding: 10px;
+        border-radius: 4px;
+        white-space: pre-wrap;
+    }
+    
+    .code-block {
+        background-color: #f8f9fa;
+        padding: 15px;
+        border-radius: 4px;
+        white-space: pre-wrap;
+        max-height: 400px;
+        overflow-y: auto;
+    }
+    
+    .badge {
+        font-size: 0.85em;
+    }
+    
+    .test-info-label {
+        font-weight: 600;
+        color: #495057;
+    }
+    
+    .test-info-value {
+        color: #212529;
+    }
+    
+    .loading-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(0, 0, 0, 0.5);
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        z-index: 9999;
+    }
+    
+    .loading-content {
+        background-color: white;
+        padding: 20px;
+        border-radius: 5px;
+        text-align: center;
+        max-width: 400px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-12">
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="{{ url_for('main.dashboard') }}">Dashboard</a></li>
+                    {% if current_user.is_admin and test_case.team %}
+                    <li class="breadcrumb-item"><a href="{{ url_for('main.projects') }}">Projects</a></li>
+                    <li class="breadcrumb-item"><a href="{{ url_for('main.project_detail', project_id=test_case.team.project.id) }}">{{ test_case.team.project.name }}</a></li>
+                    <li class="breadcrumb-item"><a href="{{ url_for('team_detail', team_id=test_case.team.id) }}">{{ test_case.team.name }}</a></li>
+                    {% endif %}
+                    <li class="breadcrumb-item active">Test Case Details</li>
+                </ol>
+            </nav>
+            
+            <div class="d-flex justify-content-between align-items-start mb-4">
+                <div>
+                    <h2>{{ test_case.tcid }}</h2>
+                    <p class="text-muted">{{ test_case.table_name }} - {{ test_case.test_type }}</p>
+                </div>
+                <div>
+                    <button type="button" 
+                            class="btn btn-success me-2"
+                            data-bs-toggle="modal" 
+                            data-bs-target="#executeModal">
+                        <i class="bi bi-play-circle"></i> Execute
+                    </button>
+                    <a href="{{ url_for('scheduler.create_schedule', test_case_id=test_case.id) }}"
+                       class="btn btn-outline-primary me-2">
+                        <i class="bi bi-clock"></i> Schedule
+                    </a>
+                    <a href="{{ url_for('edit_testcase', testcase_id=test_case.id) }}" class="btn btn-outline-primary me-2">
+                        <i class="bi bi-pencil"></i> Edit
+                    </a>
+                    <button type="button" class="btn btn-outline-danger me-2" data-bs-toggle="modal" data-bs-target="#deleteModal">
+                        <i class="bi bi-trash"></i> Delete
+                    </button>
+                    {% if current_user.is_admin and test_case.team %}
+                    <a href="{{ url_for('team_detail', team_id=test_case.team_id) }}" class="btn btn-outline-secondary">
+                        <i class="bi bi-arrow-left"></i> Back to Team
+                    </a>
+                    {% else %}
+                    <a href="{{ url_for('main.dashboard') }}" class="btn btn-outline-secondary">
+                        <i class="bi bi-arrow-left"></i> Back to Dashboard
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <div class="row">
+                <div class="col-md-4 mb-4">
+                    <div class="card h-100">
+                        <div class="card-header d-flex justify-content-between">
+                            <span>Test Case Info</span>
+                            <span class="badge {{ 'bg-success' if test_case.test_yn == 'Y' else 'bg-secondary' }}">
+                                {{ 'Active' if test_case.test_yn == 'Y' else 'Inactive' }}
+                            </span>
+                        </div>
+                        <div class="card-body">
+                            <div class="mb-3">
+                                <h6 class="test-info-label">Test Case Name</h6>
+                                <p class="test-info-value">{{ test_case.tc_name }}</p>
+                            </div>
+                            <div class="mb-3">
+                                <h6 class="test-info-label">Creator</h6>
+                                <p class="test-info-value">{{ test_case.creator.username if test_case.creator else 'Unknown' }}</p>
+                            </div>
+                            <div class="mb-3">
+                                <h6 class="test-info-label">Created At</h6>
+                                <p class="test-info-value">{{ test_case.created_at.strftime('%Y-%m-%d %H:%M') }}</p>
+                            </div>
+                            <div class="mb-3">
+                                <h6 class="test-info-label">Last Updated</h6>
+                                <p class="test-info-value">{{ test_case.updated_at.strftime('%Y-%m-%d %H:%M') }}</p>
+                            </div>
+
+                            <!-- Execution stats summary -->
+                            <div class="mt-4">
+                                <h6 class="test-info-label">Execution Summary</h6>
+                                <div class="d-flex justify-content-between my-2">
+                                    <span>Total Executions:</span>
+                                    <span class="badge bg-secondary">{{ test_case.executions|length }}</span>
+                                </div>
+                                <div class="d-flex justify-content-between my-2">
+                                    <span>Passed:</span>
+                                    <span class="badge bg-success">
+                                        {{ test_case.executions|selectattr('status', 'equalto', 'PASSED')|list|length }}
+                                    </span>
+                                </div>
+                                <div class="d-flex justify-content-between my-2">
+                                    <span>Failed:</span>
+                                    <span class="badge bg-danger">
+                                        {{ test_case.executions|selectattr('status', 'equalto', 'FAILED')|list|length }}
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="col-md-8 mb-4">
+                    <div class="card">
+                        <div class="card-header">
+                            <ul class="nav nav-tabs card-header-tabs" id="configTabs" role="tablist">
+                                <li class="nav-item" role="presentation">
+                                    <button class="nav-link active" id="connection-tab" data-bs-toggle="tab" data-bs-target="#connection-tab-pane" type="button" role="tab">Connections</button>
+                                </li>
+                                <li class="nav-item" role="presentation">
+                                    <button class="nav-link" id="parameters-tab" data-bs-toggle="tab" data-bs-target="#parameters-tab-pane" type="button" role="tab">Parameters</button>
+                                </li>
+                            </ul>
+                        </div>
+                        <div class="card-body">
+                            <div class="tab-content" id="configTabsContent">
+                                <div class="tab-pane fade show active" id="connection-tab-pane" role="tabpanel" tabindex="0">
+                                    <div class="row">
+                                        <div class="col-md-6">
+                                            <h5>Source Connection</h5>
+                                            {% if test_case.test_type == 'CCD_Validation' %}
+                                                {% if test_case.src_connection %}
+                                                <div class="card">
+                                                    <div class="card-body">
+                                                        <h6 class="card-title">{{ test_case.src_connection.name }}</h6>
+                                                        <p class="card-text mb-1"><strong>Server:</strong> {{ test_case.src_connection.server }}</p>
+                                                        <p class="card-text mb-1"><strong>Database:</strong> {{ test_case.src_connection.database }}</p>
+                                                        {% if test_case.src_connection.warehouse %}
+                                                        <p class="card-text mb-1"><strong>Warehouse:</strong> {{ test_case.src_connection.warehouse }}</p>
+                                                        {% endif %}
+                                                        {% if test_case.src_connection.role %}
+                                                        <p class="card-text"><strong>Role:</strong> {{ test_case.src_connection.role }}</p>
+                                                        {% endif %}
+                                                        {% if test_case.src_connection.is_excel %}
+                                                        <div class="badge bg-info text-dark">Excel Connection</div>
+                                                        {% endif %}
+                                                    </div>
+                                                </div>
+                                                {% else %}
+                                                <p class="text-muted">No source connection specified</p>
+                                                {% endif %}
+                                            {% else %}
+                                                <div class="alert alert-info">
+                                                    <i class="bi bi-info-circle"></i> Source connection not required for {{ test_case.test_type }}
+                                                </div>
+                                            {% endif %}
+                                        </div>
+                                        
+                                        <div class="col-md-6">
+                                            <h5>Target Connection</h5>
+                                            {% if test_case.tgt_connection %}
+                                            <div class="card">
+                                                <div class="card-body">
+                                                    <h6 class="card-title">{{ test_case.tgt_connection.name }}</h6>
+                                                    <p class="card-text mb-1"><strong>Server:</strong> {{ test_case.tgt_connection.server }}</p>
+                                                    <p class="card-text mb-1"><strong>Database:</strong> {{ test_case.tgt_connection.database }}</p>
+                                                    {% if test_case.tgt_connection.warehouse %}
+                                                    <p class="card-text mb-1"><strong>Warehouse:</strong> {{ test_case.tgt_connection.warehouse }}</p>
+                                                    {% endif %}
+                                                    {% if test_case.tgt_connection.role %}
+                                                    <p class="card-text"><strong>Role:</strong> {{ test_case.tgt_connection.role }}</p>
+                                                    {% endif %}
+                                                    {% if test_case.tgt_connection.is_excel %}
+                                                    <div class="badge bg-info text-dark">Excel Connection</div>
+                                                    {% endif %}
+                                                </div>
+                                            </div>
+                                            {% else %}
+                                            <p class="text-muted">No target connection specified</p>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="tab-pane fade" id="parameters-tab-pane" role="tabpanel" tabindex="0">
+                                    <div class="row">
+                                        <div class="col-md-6">
+                                            <h6 class="test-info-label">Primary Key Columns</h6>
+                                            <p class="test-info-value">{{ test_case.pk_columns|replace('["', '')|replace('"]', '')|replace('"', '') if test_case.pk_columns else 'None' }}</p>
+                                            
+                                            <h6 class="test-info-label">Date Fields</h6>
+                                            <p class="test-info-value">{{ test_case.date_fields|replace('["', '')|replace('"]', '')|replace('"', '') if test_case.date_fields else 'None' }}</p>
+                                            
+                                            <h6 class="test-info-label">Percentage Fields</h6>
+                                            <p class="test-info-value">{{ test_case.percentage_fields|replace('["', '')|replace('"]', '')|replace('"', '') if test_case.percentage_fields else 'None' }}</p>
+                                        </div>
+                                        
+                                        <div class="col-md-6">
+                                            <h6 class="test-info-label">Threshold Percentage</h6>
+                                            <p class="test-info-value">{{ test_case.threshold_percentage }}%</p>
+                                            
+                                            <h6 class="test-info-label">Delimiter</h6>
+                                            <p class="test-info-value">{{ test_case.delimiter }}</p>
+                                            
+                                            <h6 class="test-info-label">Filters</h6>
+                                            <p class="test-info-value">{{ test_case.filters or 'None' }}</p>
+                                            
+                                            {% if test_case.src_connection and test_case.src_connection.is_excel %}
+                                            <h6 class="test-info-label">Source Sheet Name</h6>
+                                            <p class="test-info-value">{{ test_case.src_sheet_name or 'Default' }}</p>
+                                            {% endif %}
+                                            
+                                            {% if test_case.tgt_connection and test_case.tgt_connection.is_excel %}
+                                            <h6 class="test-info-label">Target Sheet Name</h6>
+                                            <p class="test-info-value">{{ test_case.tgt_sheet_name or 'Default' }}</p>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="row">
+                <div class="col-12">
+                    <div class="card mb-4">
+                        <div class="card-header">
+                            <ul class="nav nav-tabs card-header-tabs" id="sqlTabs" role="tablist">
+                                {% if test_case.test_type == 'CCD_Validation' %}
+                                <li class="nav-item" role="presentation">
+                                    <button class="nav-link active" id="source-sql-tab" data-bs-toggle="tab" data-bs-target="#source-sql-tab-pane" type="button" role="tab">Source SQL</button>
+                                </li>
+                                <li class="nav-item" role="presentation">
+                                    <button class="nav-link" id="target-sql-tab" data-bs-toggle="tab" data-bs-target="#target-sql-tab-pane" type="button" role="tab">Target SQL</button>
+                                </li>
+                                {% else %}
+                                <li class="nav-item" role="presentation">
+                                    <button class="nav-link active" id="target-sql-tab" data-bs-toggle="tab" data-bs-target="#target-sql-tab-pane" type="button" role="tab">Target SQL</button>
+                                </li>
+                                {% endif %}
+                            </ul>
+                        </div>
+                        <div class="card-body">
+                            <div class="tab-content" id="sqlTabsContent">
+                                {% if test_case.test_type == 'CCD_Validation' %}
+                                <div class="tab-pane fade show active" id="source-sql-tab-pane" role="tabpanel" tabindex="0">
+                                    {% if src_sql %}
+                                        <div class="card-body">
+                                            {% if "Excel file:" in src_sql %}
+                                            <div class="alert alert-info">
+                                                {{ src_sql|replace('\n', '<br>')|safe }}
+                                                <hr>
+                                                <a href="{{ url_for('download_testcase_file', testcase_id=test_case.id, source_or_target='source') }}" 
+                                                class="btn btn-sm btn-primary">
+                                                    <i class="bi bi-download"></i> Download Excel File
+                                                </a>
+                                            </div>
+                                            {% else %}
+                                            <pre class="code-block"><code>{{ src_sql }}</code></pre>
+                                            {% endif %}
+                                        </div>
+                                    {% else %}
+                                        <p class="text-muted">No source SQL available</p>
+                                    {% endif %}
+                                </div>
+                                <div class="tab-pane fade" id="target-sql-tab-pane" role="tabpanel" tabindex="0">
+                                    {% if tgt_sql %}
+                                        <div class="card-body">
+                                            {% if "Excel file:" in tgt_sql %}
+                                            <div class="alert alert-info">
+                                                {{ tgt_sql|replace('\n', '<br>')|safe }}
+                                                <hr>
+                                                <a href="{{ url_for('download_testcase_file', testcase_id=test_case.id, source_or_target='target') }}" 
+                                                class="btn btn-sm btn-primary">
+                                                    <i class="bi bi-download"></i> Download Excel File
+                                                </a>
+                                            </div>
+                                            {% else %}
+                                            <pre class="code-block"><code>{{ tgt_sql }}</code></pre>
+                                            {% endif %}
+                                        </div>
+                                    {% else %}
+                                        <p class="text-muted">No target SQL available</p>
+                                    {% endif %}
+                                </div>
+                                {% else %}
+                                <div class="tab-pane fade show active" id="target-sql-tab-pane" role="tabpanel" tabindex="0">
+                                    {% if tgt_sql %}
+                                    <pre class="code-block"><code>{{ tgt_sql }}</code></pre>
+                                    <div class="mt-2 text-end">
+                                        <button class="btn btn-sm btn-outline-secondary" id="copy-tgt-sql">
+                                            <i class="bi bi-clipboard"></i> Copy
+                                        </button>
+                                    </div>
+                                    {% else %}
+                                    <p class="text-muted">No target SQL available</p>
+                                    {% endif %}
+                                </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Recent Executions Section -->
+            <div class="row mt-4">
+                <div class="col-12">
+                    <div class="card">
+                        <div class="card-header d-flex justify-content-between align-items-center">
+                            <h5 class="mb-0">Recent Executions</h5>
+                            <a href="{{ url_for('executions.execution_history') }}?test_case_id={{ test_case.id }}" 
+                               class="btn btn-sm btn-outline-primary">View All</a>
+                        </div>
+                        <div class="card-body p-0">
+                            <div class="table-responsive">
+                                <table class="table table-hover mb-0">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th>Execution Time</th>
+                                            <th>Status</th>
+                                            <th>Duration</th>
+                                            <th>Records</th>
+                                            <th>Mismatches</th>
+                                            <th>Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for execution in sorted_executions %}
+                                        <tr>
+                                            <td>{{ execution.execution_time.strftime('%Y-%m-%d %H:%M') }}</td>
+                                            <td>
+                                                {% if execution.status == 'PASSED' %}
+                                                    <span class="badge bg-success">PASSED</span>
+                                                {% elif execution.status == 'FAILED' %}
+                                                    <span class="badge bg-danger">FAILED</span>
+                                                {% elif execution.status == 'ERROR' %}
+                                                    <span class="badge bg-warning">ERROR</span>
+                                                {% elif execution.status == 'RUNNING' %}
+                                                    <span class="badge bg-info">RUNNING</span>
+                                                {% else %}
+                                                    <span class="badge bg-secondary">{{ execution.status }}</span>
+                                                {% endif %}
+                                            </td>
+                                            <td>
+                                                {% if execution.duration %}
+                                                    {{ "%.2f"|format(execution.duration) }}s
+                                                {% else %}
+                                                    -
+                                                {% endif %}
+                                            </td>
+                                            <td>{{ execution.records_compared or '-' }}</td>
+                                            <td>
+                                                {% if execution.mismatches_found %}
+                                                    <span class="text-danger">{{ execution.mismatches_found }}</span>
+                                                {% else %}
+                                                    0
+                                                {% endif %}
+                                            </td>
+                                            <td>
+                                                <a href="{{ url_for('executions.execution_detail', execution_id=execution.id) }}" 
+                                                   class="btn btn-sm btn-outline-primary">Details</a>
+                                            </td>
+                                        </tr>
+                                        {% else %}
+                                        <tr>
+                                            <td colspan="6" class="text-center">No executions yet</td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Execute Test Modal -->
+<div class="modal fade" id="executeModal" tabindex="-1" aria-labelledby="executeModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="executeModalLabel">Execute Test Case</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="execution-form">
+                    <p>You are about to execute test case <strong>{{ test_case.tcid }}</strong>.</p>
+                    
+                    {% if test_case.src_connection and test_case.src_connection.is_excel %}
+                    <div class="mb-3">
+                        <label for="src_sheet_override" class="form-label">Source Sheet Name (Optional Override)</label>
+                        <input type="text" class="form-control" id="src_sheet_override" name="src_sheet_override" 
+                               value="{{ test_case.src_sheet_name }}" placeholder="Leave empty for default">
+                        <div class="form-text">Current value: {{ test_case.src_sheet_name or 'Default' }}</div>
+                    </div>
+                    {% endif %}
+                    
+                    {% if test_case.tgt_connection and test_case.tgt_connection.is_excel %}
+                    <div class="mb-3">
+                        <label for="tgt_sheet_override" class="form-label">Target Sheet Name (Optional Override)</label>
+                        <input type="text" class="form-control" id="tgt_sheet_override" name="tgt_sheet_override" 
+                               value="{{ test_case.tgt_sheet_name }}" placeholder="Leave empty for default">
+                        <div class="form-text">Current value: {{ test_case.tgt_sheet_name or 'Default' }}</div>
+                    </div>
+                    {% endif %}
+                    
+                    <div class="mb-3 form-check">
+                        <input type="checkbox" class="form-check-input" id="debug_mode" name="debug_mode">
+                        <label class="form-check-label" for="debug_mode">Enable Debug Mode</label>
+                        <div class="form-text">This will provide more detailed logging.</div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-success" id="execute-btn" onclick="executeTest(event, '{{ test_case.id }}')">
+                    <i class="bi bi-play-circle"></i> Execute Test
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Delete Confirmation Modal -->
+<div class="modal fade" id="deleteModal" tabindex="-1" aria-labelledby="deleteModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="deleteModalLabel">Confirm Delete</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to delete the test case <strong>{{ test_case.tcid }}</strong>?</p>
+                <div class="alert alert-danger">
+                    <i class="bi bi-exclamation-triangle"></i> This action cannot be undone!
+                    <ul class="mb-0 mt-2">
+                        <li>All test executions will be permanently deleted</li>
+                        <li>All schedules for this test case will be removed</li>
+                        <li>Source and target SQL files will be deleted</li>
+                    </ul>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <form action="{{ url_for('testcases.delete_testcase', testcase_id=test_case.id) }}" method="post">
+                    <button type="submit" class="btn btn-danger">Delete Test Case</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Loading Overlay -->
+<div id="loading-overlay" class="loading-overlay" style="display: none;">
+    <div class="loading-content">
+        <div class="spinner-border text-primary mb-3" role="status">
+            <span class="visually-hidden">Loading...</span>
+        </div>
+        <h5>Executing Test Case</h5>
+        <p id="loading-message">Please wait while the test is being executed...</p>
+        <div class="progress mt-3" style="height: 20px;">
+            <div id="execution-progress" class="progress-bar progress-bar-striped progress-bar-animated" 
+                 role="progressbar" style="width: 0%"></div>
+        </div>
+    </div>
+</div>
+
+<!-- JavaScript for AJAX execution -->
+<script>
+function executeTest(event, testCaseId) {
+    event.preventDefault();
+    
+    // Close modal
+    var executeModal = bootstrap.Modal.getInstance(document.getElementById('executeModal'));
+    if (executeModal) {
+        executeModal.hide();
+    }
+    
+    // Show loading overlay
+    const loadingOverlay = document.getElementById('loading-overlay');
+    const progressBar = document.getElementById('execution-progress');
+    const loadingMessage = document.getElementById('loading-message');
+    loadingOverlay.style.display = 'flex';
+    
+    // Get form data
+    const form = document.getElementById('execution-form');
+    const formData = new FormData(form);
+    
+    // Simulate progress (since we can't get real-time updates)
+    let progress = 0;
+    const progressInterval = setInterval(function() {
+        progress += 5;
+        if (progress <= 90) {
+            progressBar.style.width = progress + '%';
+            
+            // Update message based on progress
+            if (progress < 20) {
+                loadingMessage.textContent = "Reading source data...";
+            } else if (progress < 40) {
+                loadingMessage.textContent = "Reading target data...";
+            } else if (progress < 60) {
+                loadingMessage.textContent = "Comparing data...";
+            } else if (progress < 80) {
+                loadingMessage.textContent = "Analyzing differences...";
+            } else {
+                loadingMessage.textContent = "Generating report...";
+            }
+        }
+    }, 500);
+    
+    fetch(`/api/execute/${testCaseId}`, {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        clearInterval(progressInterval);
+        progressBar.style.width = '100%';
+        loadingMessage.textContent = 'Execution complete!';
+        
+        if (data.error) {
+            progressBar.classList.remove('bg-primary');
+            progressBar.classList.add('bg-danger');
+            loadingMessage.textContent = 'Error: ' + data.error;
+            
+            setTimeout(function() {
+                loadingOverlay.style.display = 'none';
+                progressBar.classList.remove('bg-danger');
+                progressBar.classList.add('bg-primary');
+                progressBar.style.width = '0%';
+            }, 2000);
+        } else {
+            setTimeout(function() {
+                loadingOverlay.style.display = 'none';
+                progressBar.style.width = '0%';
+                
+                // Redirect to execution detail page
+                window.location.href = `/execution/${data.execution_id}`;
+            }, 1000);
+        }
+    })
+    .catch(error => {
+        clearInterval(progressInterval);
+        progressBar.classList.remove('bg-primary');
+        progressBar.classList.add('bg-danger');
+        progressBar.style.width = '100%';
+        loadingMessage.textContent = 'Error: ' + error.message;
+        
+        setTimeout(function() {
+            loadingOverlay.style.display = 'none';
+            progressBar.classList.remove('bg-danger');
+            progressBar.classList.add('bg-primary');
+            progressBar.style.width = '0%';
+        }, 2000);
+    });
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    // Copy buttons for SQL content
+    const copySrcSqlBtn = document.getElementById('copy-src-sql');
+    if (copySrcSqlBtn) {
+        copySrcSqlBtn.addEventListener('click', function() {
+            const sqlContent = document.querySelector('#source-sql-tab-pane .code-block code').textContent;
+            navigator.clipboard.writeText(sqlContent).then(function() {
+                const originalText = copySrcSqlBtn.innerHTML;
+                copySrcSqlBtn.innerHTML = '<i class="bi bi-check"></i> Copied!';
+                setTimeout(function() {
+                    copySrcSqlBtn.innerHTML = originalText;
+                }, 2000);
+            });
+        });
+    }
+    
+    const copyTgtSqlBtn = document.getElementById('copy-tgt-sql');
+    if (copyTgtSqlBtn) {
+        copyTgtSqlBtn.addEventListener('click', function() {
+            const sqlContent = document.querySelector('#target-sql-tab-pane .code-block code').textContent;
+            navigator.clipboard.writeText(sqlContent).then(function() {
+                const originalText = copyTgtSqlBtn.innerHTML;
+                copyTgtSqlBtn.innerHTML = '<i class="bi bi-check"></i> Copied!';
+                setTimeout(function() {
+                    copyTgtSqlBtn.innerHTML = originalText;
+                }, 2000);
+            });
+        });
+    }
+});
+</script>
+{% endblock %}
