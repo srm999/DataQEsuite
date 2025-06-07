@@ -97,7 +97,8 @@ def create_app():
     @app.route('/dashboard', endpoint='main.dashboard')
     @app.route('/dashboard-legacy', endpoint='dashboard')
     def placeholder_dashboard():
-        return render_template("admin_dashboard.html")
+        """Redirect legacy dashboard links to the results dashboard."""
+        return redirect(url_for('executions.results_dashboard'))
 
     @app.route('/results-dashboard', endpoint='results_dashboard')
     def placeholder_results_dashboard():
