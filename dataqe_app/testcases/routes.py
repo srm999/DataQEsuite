@@ -185,6 +185,11 @@ def new_testcase():
                 f.write(tgt_query)
             tgt_data_file = filename
         elif tgt_file and tgt_file.filename:
+
+            filename = f"{uuid.uuid4().hex}_{secure_filename(tgt_file.filename)}"
+            tgt_file.save(os.path.join(project_input_folder, filename))
+            tgt_data_file = filename
+
             if src_file and src_file.filename:
                 filename = f"{uuid.uuid4().hex}_{secure_filename(src_file.filename)}"
                 src_file.save(os.path.join(project_input_folder, filename))
@@ -193,6 +198,7 @@ def new_testcase():
                 filename = f"{uuid.uuid4().hex}_{secure_filename(tgt_file.filename)}"
                 tgt_file.save(os.path.join(project_input_folder, filename))
                 tgt_data_file = filename
+
 
         test_case = TestCase(
             tcid=tcid,
@@ -277,6 +283,15 @@ def edit_testcase(testcase_id):
             test_case.src_data_file = filename
         elif src_file and src_file.filename:
 
+            if test_case.src_data_file:
+                old_path = os.path.join(project_input_folder, test_case.src_data_file)
+                if os.path.exists(old_path):
+                    os.remove(old_path)
+            filename = f"{uuid.uuid4().hex}_{secure_filename(src_file.filename)}"
+            src_file.save(os.path.join(project_input_folder, filename))
+            test_case.src_data_file = filename
+
+
             if src_file and src_file.filename:
                 if test_case.src_data_file:
                     old_path = os.path.join(project_input_folder, test_case.src_data_file)
@@ -285,6 +300,7 @@ def edit_testcase(testcase_id):
                 filename = f"{uuid.uuid4().hex}_{secure_filename(src_file.filename)}"
                 src_file.save(os.path.join(project_input_folder, filename))
                 test_case.src_data_file = filename
+
 
         tgt_file = request.files.get('tgt_file')
         if tgt_input_type == 'query' and tgt_query:
@@ -298,6 +314,15 @@ def edit_testcase(testcase_id):
             test_case.tgt_data_file = filename
         elif tgt_file and tgt_file.filename:
 
+            if test_case.tgt_data_file:
+                old_path = os.path.join(project_input_folder, test_case.tgt_data_file)
+                if os.path.exists(old_path):
+                    os.remove(old_path)
+            filename = f"{uuid.uuid4().hex}_{secure_filename(tgt_file.filename)}"
+            tgt_file.save(os.path.join(project_input_folder, filename))
+            test_case.tgt_data_file = filename
+
+
             if tgt_file and tgt_file.filename:
                 if test_case.tgt_data_file:
                     old_path = os.path.join(project_input_folder, test_case.tgt_data_file)
@@ -306,6 +331,7 @@ def edit_testcase(testcase_id):
                 filename = f"{uuid.uuid4().hex}_{secure_filename(tgt_file.filename)}"
                 tgt_file.save(os.path.join(project_input_folder, filename))
                 test_case.tgt_data_file = filename
+
 
         db.session.commit()
 
@@ -328,4 +354,46 @@ def edit_testcase(testcase_id):
                 tgt_sql = f.read()
 
     return render_template('testcase_edit.html', team=team, test_case=test_case, connections=connections, src_sql=src_sql, tgt_sql=tgt_sql)
+
+
+@testcases_bp.route('/testcase/<int:testcase_id>', methods=['GET'])
+@login_required
+def testcase_detail(testcase_id):
+    """Display detailed information about a test case."""
+    test_case = TestCase.query.get_or_404(testcase_id)
+
+    if not current_user.is_admin and current_user.team_id != test_case.team_id:
+        flash('Access denied', 'error')
+        return redirect(url_for('dashboard'))
+
+    project_input_folder = os.path.join(
+        test_case.team.project.folder_path, 'input'
+    ) if test_case.team and test_case.team.project else current_app.config['UPLOAD_FOLDER']
+    src_sql = None
+    tgt_sql = None
+    if test_case.src_data_file:
+        src_path = os.path.join(project_input_folder, test_case.src_data_file)
+        if os.path.exists(src_path):
+            with open(src_path) as f:
+                src_sql = f.read()
+    if test_case.tgt_data_file:
+        tgt_path = os.path.join(project_input_folder, test_case.tgt_data_file)
+        if os.path.exists(tgt_path):
+            with open(tgt_path) as f:
+                tgt_sql = f.read()
+
+    sorted_executions = sorted(
+        test_case.executions,
+        key=lambda e: e.execution_time or datetime.min,
+        reverse=True
+    )
+
+    return render_template(
+        'testcase_detail.html',
+        test_case=test_case,
+        src_sql=src_sql,
+        tgt_sql=tgt_sql,
+        sorted_executions=sorted_executions[:10]
+    )
+
 

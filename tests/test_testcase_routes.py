@@ -33,8 +33,8 @@ import apscheduler.schedulers.background
 apscheduler.schedulers.background.BackgroundScheduler.start = lambda self, *a, **k: None
 
 from dataqe_app import create_app, db, login_manager
-
 from dataqe_app.models import Project, Team, User, Connection, TestCase as TestCaseModel
+
 
 
 @login_manager.user_loader
@@ -63,6 +63,7 @@ def test_new_testcase_route(tmp_path):
         conn1 = Connection(name='SrcConn', project_id=project.id)
         conn2 = Connection(name='TgtConn', project_id=project.id)
         db.session.add_all([conn1, conn2])
+
 
         user = User(username='u', email='u@example.com')
         user.set_password('pwd')
@@ -97,6 +98,7 @@ def test_new_testcase_route(tmp_path):
             follow_redirects=True
         )
 
+
         resp = client.post(f'/testcase/new?team_id={tid}', data={
             'tcid': 'TC1',
             'tc_name': 'Test',
@@ -104,6 +106,7 @@ def test_new_testcase_route(tmp_path):
             'test_type': 'CCD_Validation',
             'delimiter': ','
         }, follow_redirects=True)
+
 
         assert resp.status_code == 200
         with app.app_context():
@@ -150,7 +153,9 @@ def test_edit_testcase_route(tmp_path):
             src_data_file='old.sql'
         )
 
+
         tc = TestCaseModel(tcid='TC1', tc_name='Old', table_name='tbl', test_type='CCD_Validation', team_id=team.id)
+
 
         db.session.add(tc)
         db.session.commit()
@@ -174,12 +179,14 @@ def test_edit_testcase_route(tmp_path):
             follow_redirects=True
         )
 
+
         resp = client.post(f'/testcase/{tcid}/edit', data={
             'tcid': 'TC1',
             'tc_name': 'NewName',
             'table_name': 'tbl2',
             'test_type': 'CCD_Validation'
         }, follow_redirects=True)
+
 
         assert resp.status_code == 200
         with app.app_context():
@@ -193,5 +200,38 @@ def test_edit_testcase_route(tmp_path):
             assert src_path.read_text() == 'new src'
             assert tgt_path.read_text() == 'new tgt'
             assert not old_query.exists()
+
+
+
+def test_testcase_detail_route(tmp_path):
+    app = create_app()
+    with app.app_context():
+        db.drop_all()
+        db.create_all()
+        folder = tmp_path / "proj3"
+        folder.mkdir(parents=True)
+        (folder / "input").mkdir()
+        project = Project(name='Demo', folder_path=str(folder))
+        team = Team(name='TeamX')
+        db.session.add_all([project, team])
+        db.session.commit()
+        project.team_id = team.id
+        user = User(username='u', email='u@example.com')
+        user.set_password('pwd')
+        user.team_id = team.id
+        db.session.add(user)
+        tc = TestCaseModel(tcid='TC2', table_name='tbl', test_type='CCD_Validation', team_id=team.id)
+        db.session.add(tc)
+        db.session.commit()
+        uid = user.id
+        tcid = tc.id
+
+    with app.test_client() as client:
+        login(client, uid)
+        resp = client.get(f'/testcase/{tcid}')
+        assert resp.status_code == 200
+        html = resp.data.decode()
+        assert 'Test Case Details' in html
+        assert 'TC2' in html
 
 
