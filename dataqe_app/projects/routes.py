@@ -71,3 +71,13 @@ def new_connection(project_id):
             return redirect(url_for('projects.project_detail', project_id=project.id))
     return render_template('connection_new.html', project=project)
 
+
+@projects_bp.route('/projects/<int:project_id>/delete', methods=['POST'])
+def delete_project(project_id):
+    """Delete a project and its connections."""
+    project = Project.query.get_or_404(project_id)
+    Connection.query.filter_by(project_id=project_id).delete()
+    db.session.delete(project)
+    db.session.commit()
+    return redirect(url_for('projects.projects'))
+

@@ -62,7 +62,7 @@ def test_connection_creation():
         assert resp.status_code == 200
 
     with app.app_context():
-        conn = Connection.query.filter_by(name='TestConn').first()
+        conn = Connection.query.filter_by(name='TestConn').order_by(Connection.id.desc()).first()
         assert conn is not None
         assert conn.project_id == pid
         assert conn.server == 'srv'
