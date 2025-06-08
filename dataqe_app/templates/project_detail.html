@@ -20,7 +20,8 @@
                     <p class="text-muted">{{ project.description }}</p>
                 </div>
                 <div>
-                    <a href="{{ url_for('projects.projects') }}" class="btn btn-outline-secondary">Back to Projects</a>
+                    <a href="{{ url_for('projects.projects') }}" class="btn btn-outline-secondary me-2">Back to Projects</a>
+                    <button type="button" class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#deleteProjectModal">Delete Project</button>
                 </div>
             </div>
             
@@ -174,6 +175,31 @@
                 </div>
             </div>
         </div>
+</div>
+</div>
+
+<!-- Delete Project Modal -->
+<div class="modal fade" id="deleteProjectModal" tabindex="-1" aria-labelledby="deleteProjectModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="deleteProjectModalLabel">Confirm Delete</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to delete the project <strong>{{ project.name }}</strong>?</p>
+                <div class="alert alert-danger">
+                    <i class="bi bi-exclamation-triangle"></i> This action cannot be undone!
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <form action="{{ url_for('projects.delete_project', project_id=project.id) }}" method="post">
+                    <button type="submit" class="btn btn-danger">Delete Project</button>
+                </form>
+            </div>
+        </div>
     </div>
 </div>
+
 {% endblock %}
