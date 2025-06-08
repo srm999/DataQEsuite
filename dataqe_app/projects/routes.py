@@ -28,3 +28,29 @@ def project_detail(project_id):
     teams = [project.team] if getattr(project, 'team', None) else []
     connections = getattr(project, 'connections', [])
     return render_template('project_detail.html', project=project, teams=teams, connections=connections)
+
+@projects_bp.route('/teams/new/<int:project_id>', methods=['GET', 'POST'])
+def new_team(project_id):
+    """Create a new team for the given project."""
+    project = Project.query.get_or_404(project_id)
+    if request.method == 'POST':
+        name = request.form.get('name')
+        if name:
+            team = Team(name=name)
+            db.session.add(team)
+            db.session.flush()
+            project.team_id = team.id
+            db.session.commit()
+            return redirect(url_for('projects.project_detail', project_id=project_id))
+    return render_template('team_new.html', project=project)
+
+
+@projects_bp.route('/connections/new/<int:project_id>', methods=['GET', 'POST'])
+def new_connection(project_id):
+    """Placeholder page for creating a project connection."""
+    project = Project.query.get_or_404(project_id)
+    if request.method == 'POST':
+        # Connection model is not implemented; simply return to project page
+        return redirect(url_for('projects.project_detail', project_id=project_id))
+    return render_template('connection_new.html', project=project)
+
