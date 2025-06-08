@@ -1,6 +1,6 @@
 from flask import Blueprint, render_template, request, redirect, url_for
 from dataqe_app import db
-from dataqe_app.models import Project, Team
+from dataqe_app.models import Project, Team, Connection
 
 projects_bp = Blueprint('projects', __name__)
 
@@ -47,10 +47,27 @@ def new_team(project_id):
 
 @projects_bp.route('/connections/new/<int:project_id>', methods=['GET', 'POST'])
 def new_connection(project_id):
-    """Placeholder page for creating a project connection."""
+    """Create a new connection for the given project."""
     project = Project.query.get_or_404(project_id)
     if request.method == 'POST':
-        # Connection model is not implemented; simply return to project page
-        return redirect(url_for('projects.project_detail', project_id=project_id))
+        name = request.form.get('name')
+        server = request.form.get('server')
+        database = request.form.get('database')
+        is_excel = bool(request.form.get('is_excel'))
+        warehouse = request.form.get('warehouse')
+        role = request.form.get('role')
+        if name:
+            conn = Connection(
+                name=name,
+                server=server,
+                database=database,
+                is_excel=is_excel,
+                warehouse=warehouse,
+                role=role,
+                project_id=project.id,
+            )
+            db.session.add(conn)
+            db.session.commit()
+            return redirect(url_for('projects.project_detail', project_id=project.id))
     return render_template('connection_new.html', project=project)
 

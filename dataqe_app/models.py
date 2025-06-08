@@ -14,6 +14,17 @@ class Project(db.Model):
     description = db.Column(db.Text, nullable=True)   # And this
     folder_path = db.Column(db.String(255), nullable=True)
     team_id = db.Column(db.Integer, db.ForeignKey('team.id'))
+    connections = db.relationship('Connection', backref='project', lazy=True)
+
+class Connection(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(100), nullable=False)
+    server = db.Column(db.String(255))
+    database = db.Column(db.String(255))
+    is_excel = db.Column(db.Boolean, default=False)
+    warehouse = db.Column(db.String(255))
+    role = db.Column(db.String(255))
+    project_id = db.Column(db.Integer, db.ForeignKey('project.id'))
 
 
 class User(UserMixin, db.Model):
@@ -39,8 +50,10 @@ class TestCase(db.Model):
     test_yn = db.Column(db.String(1), default='Y')
     src_data_file = db.Column(db.String(255))
     tgt_data_file = db.Column(db.String(255))
-    src_connection_id = db.Column(db.Integer)
-    tgt_connection_id = db.Column(db.Integer)
+    src_connection_id = db.Column(db.Integer, db.ForeignKey('connection.id'))
+    tgt_connection_id = db.Column(db.Integer, db.ForeignKey('connection.id'))
+    src_connection = db.relationship('Connection', foreign_keys=[src_connection_id])
+    tgt_connection = db.relationship('Connection', foreign_keys=[tgt_connection_id])
     filters = db.Column(db.Text)
     delimiter = db.Column(db.String(10))
     pk_columns = db.Column(db.String(255))
