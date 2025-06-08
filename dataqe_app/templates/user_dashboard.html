@@ -33,7 +33,7 @@
                         </a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="{{ url_for('new_testcase') }}">
+                        <a class="nav-link" href="{{ url_for('testcases.new_testcase') }}">
                             <i class="bi bi-plus-circle"></i> New Test Case
                         </a>
                     </li>
@@ -53,7 +53,7 @@
                         <a href="{{ url_for('projects.new_connection', project_id=team.project.id) }}" class="btn btn-primary me-2">
                             <i class="bi bi-database-add"></i> New Connection
                         </a>
-                        <a href="{{ url_for('new_testcase') }}" class="btn btn-primary">
+                        <a href="{{ url_for('testcases.new_testcase') }}" class="btn btn-primary">
                             <i class="bi bi-plus-circle"></i> New Test Case
                         </a>
                     </div>
@@ -244,7 +244,7 @@
                                         <td>{{ test_case.created_at.strftime('%Y-%m-%d') }}</td>
                                         <td>
                                             <a href="{{ url_for('testcases.testcase_detail', testcase_id=test_case.id) }}" class="btn btn-sm btn-outline-primary">View</a>
-                                            <a href="{{ url_for('edit_testcase', testcase_id=test_case.id) }}" class="btn btn-sm btn-outline-secondary">Edit</a>
+                                            <a href="{{ url_for('testcases.edit_testcase', testcase_id=test_case.id) }}" class="btn btn-sm btn-outline-secondary">Edit</a>
                                             <button type="button" class="btn btn-sm btn-outline-danger" onclick="confirmDelete({{ test_case.id }}, '{{ test_case.tcid }}')">Delete</button>
                                         </td>
                                     </tr>
@@ -252,7 +252,7 @@
                                     <tr>
                                         <td colspan="6" class="text-center">
                                             No test cases created yet.
-                                            <a href="{{ url_for('new_testcase') }}">Create your first test case</a>
+                                            <a href="{{ url_for('testcases.new_testcase') }}">Create your first test case</a>
                                         </td>
                                     </tr>
                                     {% endfor %}

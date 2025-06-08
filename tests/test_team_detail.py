@@ -41,9 +41,6 @@ from dataqe_app.models import Project, Team, User
 
 def test_team_detail_page():
     app = create_app()
-    @app.route('/testcase/new', endpoint='new_testcase')
-    def new_testcase():
-        return 'new'
     with app.app_context():
         db.drop_all()
         db.create_all()
@@ -68,9 +65,6 @@ def test_team_detail_page():
 
 def test_add_member_route():
     app = create_app()
-    @app.route('/testcase/new', endpoint='new_testcase')
-    def new_testcase():
-        return 'new'
     with app.app_context():
         db.drop_all()
         db.create_all()
@@ -91,9 +85,6 @@ def test_add_member_route():
 
 def test_remove_member_route():
     app = create_app()
-    @app.route('/testcase/new', endpoint='new_testcase')
-    def new_testcase():
-        return 'new'
     with app.app_context():
         db.create_all()
         team = Team(name='Gamma')
@@ -115,9 +106,6 @@ def test_remove_member_route():
 
 def test_edit_user_route():
     app = create_app()
-    @app.route('/testcase/new', endpoint='new_testcase')
-    def new_testcase():
-        return 'new'
     with app.app_context():
         db.drop_all()
         db.create_all()

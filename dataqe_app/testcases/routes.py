@@ -118,3 +118,27 @@ def debug_last_execution():
             'end_time': execution.end_time.isoformat() if execution.end_time else None
         })
     return jsonify({'error': 'No executions found'})
+
+
+@testcases_bp.route('/testcase/new', methods=['GET', 'POST'], endpoint='new_testcase')
+def new_testcase():
+    """Placeholder for creating a new test case."""
+    if request.method == 'POST':
+        # For now simply acknowledge the post and redirect back
+        flash('Test case creation not implemented', 'info')
+        team_id = request.args.get('team_id') or request.form.get('team_id')
+        if team_id:
+            return redirect(url_for('team_detail', team_id=team_id))
+        return redirect(url_for('dashboard'))
+
+    return render_template('placeholder.html', title='New Test Case')
+
+
+@testcases_bp.route('/testcase/<int:testcase_id>/edit', methods=['GET', 'POST'], endpoint='edit_testcase')
+def edit_testcase(testcase_id):
+    """Placeholder for editing a test case."""
+    if request.method == 'POST':
+        flash('Editing test cases is not implemented', 'info')
+        return redirect(url_for('testcase_detail', testcase_id=testcase_id))
+
+    return render_template('placeholder.html', title='Edit Test Case')
