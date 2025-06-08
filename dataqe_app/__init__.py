@@ -49,12 +49,14 @@ def create_app():
     from dataqe_app.executions.routes import executions_bp
     from dataqe_app.scheduler.routes import scheduler_bp
     from dataqe_app.default_route import main_bp
+    from dataqe_app.projects.routes import projects_bp
 
     app.register_blueprint(auth_bp)
     app.register_blueprint(testcases_bp)
     app.register_blueprint(executions_bp)
     app.register_blueprint(scheduler_bp)
     app.register_blueprint(main_bp)
+    app.register_blueprint(projects_bp)
 
     @app.cli.command("init-db")
     def init_db_command():
@@ -71,24 +73,6 @@ def create_app():
 
         print("Database initialized.")
 
-    from dataqe_app.models import Project
-
-    @app.route('/projects', endpoint='main.projects')
-    def placeholder_projects():
-        projects = Project.query.all()
-        return render_template("projects.html", projects=projects)
-
-    @app.route('/projects/new', methods=['GET', 'POST'], endpoint='main.new_project')
-    def placeholder_new_project():
-        if request.method == 'POST':
-            name = request.form.get("name")
-            description = request.form.get("description")
-            if name:
-                new_project = Project(name=name, description=description)
-                db.session.add(new_project)
-                db.session.commit()
-                return redirect(url_for('main.projects'))
-        return render_template("project_new.html")
 
     @app.route('/users', endpoint='main.users')
     def placeholder_users():
@@ -104,10 +88,6 @@ def create_app():
     def placeholder_results_dashboard():
         return render_template("results_dashboard.html")
 
-    @app.route('/projects/<int:project_id>', endpoint='project_detail')
-    @app.route('/projects/<int:project_id>', endpoint='main.project_detail')
-    def placeholder_project_detail(project_id):
-        return render_template('placeholder.html', title='Project Detail')
 
     @app.route('/teams/<int:team_id>', endpoint='team_detail')
     def placeholder_team_detail(team_id):
