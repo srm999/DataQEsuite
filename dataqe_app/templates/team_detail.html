@@ -13,7 +13,7 @@
 
                     <li class="breadcrumb-item"><a href="{{ url_for('projects.projects') }}">Projects</a></li>
 
-                    <li class="breadcrumb-item"><a href="{{ url_for('projects') }}">Projects</a></li>
+                    <li class="breadcrumb-item"><a href="{{ url_for('projects.projects') }}">Projects</a></li>
 
                     <li class="breadcrumb-item"><a href="{{ url_for('projects.project_detail', project_id=team.project.id) }}">{{ team.project.name }}</a></li>
                     {% endif %}
