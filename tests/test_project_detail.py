@@ -41,9 +41,9 @@ from dataqe_app.models import Project, Team
 
 
 
-
 def test_project_detail_page():
     app = create_app()
+
 
 
     @app.route('/teams/new/<int:project_id>')
@@ -53,6 +53,7 @@ def test_project_detail_page():
     @app.route('/connections/new/<int:project_id>')
     def new_connection(project_id):
         return 'new connection'
+
 
     with app.app_context():
         db.create_all()
@@ -99,6 +100,5 @@ def test_new_connection_route():
         assert resp.status_code == 200
         resp = client.post(f'/connections/new/{pid}', data={'name': 'conn'}, follow_redirects=True)
         assert resp.status_code == 200
-
 
 
