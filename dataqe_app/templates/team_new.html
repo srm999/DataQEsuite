@@ -9,7 +9,7 @@
             <nav aria-label="breadcrumb">
                 <ol class="breadcrumb">
                     <li class="breadcrumb-item"><a href="{{ url_for('dashboard') }}">Dashboard</a></li>
-                    <li class="breadcrumb-item"><a href="{{ url_for('projects') }}">Projects</a></li>
+                    <li class="breadcrumb-item"><a href="{{ url_for('projects.projects') }}">Projects</a></li>
                     <li class="breadcrumb-item"><a href="{{ url_for('projects.project_detail', project_id=project.id) }}">{{ project.name }}</a></li>
                     <li class="breadcrumb-item active">New Team</li>
                 </ol>
@@ -20,7 +20,7 @@
                     <h4 class="mb-0">Create New Team</h4>
                 </div>
                 <div class="card-body">
-                    <form action="{{ url_for('new_team', project_id=project.id) }}" method="post">
+                    <form action="{{ url_for('projects.new_team', project_id=project.id) }}" method="post">
                         <div class="mb-3">
                             <label for="name" class="form-label">Team Name</label>
                             <input type="text" class="form-control" id="name" name="name" required>

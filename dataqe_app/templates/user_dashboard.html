@@ -28,7 +28,7 @@
                         </a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="{{ url_for('new_connection', project_id=team.project.id) }}">
+                        <a class="nav-link" href="{{ url_for('projects.new_connection', project_id=team.project.id) }}">
                             <i class="bi bi-database-add"></i> New Connection
                         </a>
                     </li>
@@ -50,7 +50,7 @@
                         <p class="text-muted">Project: {{ team.project.name }}</p>
                     </div>
                     <div>
-                        <a href="{{ url_for('new_connection', project_id=team.project.id) }}" class="btn btn-primary me-2">
+                        <a href="{{ url_for('projects.new_connection', project_id=team.project.id) }}" class="btn btn-primary me-2">
                             <i class="bi bi-database-add"></i> New Connection
                         </a>
                         <a href="{{ url_for('new_testcase') }}" class="btn btn-primary">
