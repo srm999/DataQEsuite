@@ -58,7 +58,18 @@ class TestCase(db.Model):
     delimiter = db.Column(db.String(10))
     pk_columns = db.Column(db.String(255))
     date_fields = db.Column(db.String(255))
+    percentage_fields = db.Column(db.String(255))
+    threshold_percentage = db.Column(db.Float)
+    src_sheet_name = db.Column(db.String(255))
+    tgt_sheet_name = db.Column(db.String(255))
+    header_columns = db.Column(db.String(255))
+    skip_rows = db.Column(db.String(255))
+    creator_id = db.Column(db.Integer, db.ForeignKey('user.id'))
+    created_at = db.Column(db.DateTime, default=db.func.current_timestamp())
+    updated_at = db.Column(db.DateTime, default=db.func.current_timestamp(), onupdate=db.func.current_timestamp())
+    creator = db.relationship('User', foreign_keys=[creator_id])
     team_id = db.Column(db.Integer, db.ForeignKey('team.id'))
+    team = db.relationship('Team', backref='test_cases')
 
 class TestExecution(db.Model):
     id = db.Column(db.Integer, primary_key=True)

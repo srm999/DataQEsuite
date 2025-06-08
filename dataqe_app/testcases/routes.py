@@ -1,11 +1,12 @@
-from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify
+from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify, current_app
 from flask_login import login_required, current_user
 from dataqe_app import db
-from dataqe_app.models import TestCase, ScheduledTest, TestExecution, TestMismatch, User
+from dataqe_app.models import TestCase, ScheduledTest, TestExecution, TestMismatch, User, Team
 from dataqe_app.utils.helpers import run_scheduled_test
 from datetime import datetime
 import os
 import uuid
+from werkzeug.utils import secure_filename
 from apscheduler.triggers.cron import CronTrigger
 
 
@@ -121,24 +122,198 @@ def debug_last_execution():
 
 
 @testcases_bp.route('/testcase/new', methods=['GET', 'POST'], endpoint='new_testcase')
+@login_required
 def new_testcase():
-    """Placeholder for creating a new test case."""
-    if request.method == 'POST':
-        # For now simply acknowledge the post and redirect back
-        flash('Test case creation not implemented', 'info')
-        team_id = request.args.get('team_id') or request.form.get('team_id')
-        if team_id:
-            return redirect(url_for('team_detail', team_id=team_id))
+    """Create a new test case."""
+    team_id = request.args.get('team_id') or request.form.get('team_id') or current_user.team_id
+    if not team_id:
+        flash('Team not specified', 'error')
         return redirect(url_for('dashboard'))
 
-    return render_template('placeholder.html', title='New Test Case')
+    team = Team.query.get_or_404(team_id)
+
+    if not current_user.is_admin and current_user.team_id != team.id:
+        flash('Access denied', 'error')
+        return redirect(url_for('dashboard'))
+
+    connections = team.project.connections if team.project else []
+
+    if request.method == 'POST':
+        tcid = request.form.get('tcid')
+        table_name = request.form.get('table_name')
+        test_type = request.form.get('test_type')
+        tc_name = request.form.get('tc_name')
+        test_yn = 'Y' if request.form.get('test_yn') else 'N'
+        src_conn_id = request.form.get('src_connection_id') or None
+        tgt_conn_id = request.form.get('tgt_connection_id') or None
+        delimiter = request.form.get('delimiter')
+        filters = request.form.get('filters')
+        pk_columns = request.form.get('pk_columns')
+        date_fields = request.form.get('date_fields')
+        percentage_fields = request.form.get('percentage_fields')
+        threshold_percentage = request.form.get('threshold_percentage')
+        header_columns = request.form.get('header_columns')
+        skip_rows = request.form.get('skip_rows')
+        src_sheet_name = request.form.get('src_sheet_name')
+        tgt_sheet_name = request.form.get('tgt_sheet_name')
+        src_input_type = request.form.get('src_input_type')
+        tgt_input_type = request.form.get('tgt_input_type')
+        src_query = request.form.get('src_query')
+        tgt_query = request.form.get('tgt_query')
+
+        project_input_folder = os.path.join(team.project.folder_path, 'input') if team.project else current_app.config['UPLOAD_FOLDER']
+        os.makedirs(project_input_folder, exist_ok=True)
+
+        src_file = request.files.get('src_file')
+        tgt_file = request.files.get('tgt_file')
+        src_data_file = None
+        tgt_data_file = None
+        if src_input_type == 'query' and src_query:
+            filename = f"{uuid.uuid4().hex}.sql"
+            with open(os.path.join(project_input_folder, filename), 'w') as f:
+                f.write(src_query)
+            src_data_file = filename
+        elif src_file and src_file.filename:
+            filename = f"{uuid.uuid4().hex}_{secure_filename(src_file.filename)}"
+            src_file.save(os.path.join(project_input_folder, filename))
+            src_data_file = filename
+
+        if tgt_input_type == 'query' and tgt_query:
+            filename = f"{uuid.uuid4().hex}.sql"
+            with open(os.path.join(project_input_folder, filename), 'w') as f:
+                f.write(tgt_query)
+            tgt_data_file = filename
+        elif tgt_file and tgt_file.filename:
+            filename = f"{uuid.uuid4().hex}_{secure_filename(tgt_file.filename)}"
+            tgt_file.save(os.path.join(project_input_folder, filename))
+            tgt_data_file = filename
+
+        test_case = TestCase(
+            tcid=tcid,
+            tc_name=tc_name,
+            table_name=table_name,
+            test_type=test_type,
+            test_yn=test_yn,
+            src_data_file=src_data_file,
+            tgt_data_file=tgt_data_file,
+            src_connection_id=src_conn_id,
+            tgt_connection_id=tgt_conn_id,
+            filters=filters,
+            delimiter=delimiter,
+            pk_columns=pk_columns,
+            date_fields=date_fields,
+            percentage_fields=percentage_fields,
+            threshold_percentage=threshold_percentage,
+            header_columns=header_columns,
+            skip_rows=skip_rows,
+            src_sheet_name=src_sheet_name,
+            tgt_sheet_name=tgt_sheet_name,
+            team_id=team.id,
+            creator_id=current_user.id,
+        )
+        db.session.add(test_case)
+        db.session.commit()
+
+        flash('Test case created successfully', 'success')
+        return redirect(url_for('team_detail', team_id=team.id))
+
+    return render_template('testcase_new.html', team=team, connections=connections)
 
 
 @testcases_bp.route('/testcase/<int:testcase_id>/edit', methods=['GET', 'POST'], endpoint='edit_testcase')
+@login_required
 def edit_testcase(testcase_id):
-    """Placeholder for editing a test case."""
-    if request.method == 'POST':
-        flash('Editing test cases is not implemented', 'info')
-        return redirect(url_for('testcase_detail', testcase_id=testcase_id))
+    """Edit an existing test case."""
+    test_case = TestCase.query.get_or_404(testcase_id)
 
-    return render_template('placeholder.html', title='Edit Test Case')
+    if not current_user.is_admin and current_user.team_id != test_case.team_id:
+        flash('Access denied', 'error')
+        return redirect(url_for('dashboard'))
+
+    team = test_case.team
+    connections = team.project.connections if team and team.project else []
+
+    if request.method == 'POST':
+        test_case.tcid = request.form.get('tcid')
+        test_case.table_name = request.form.get('table_name')
+        test_case.test_type = request.form.get('test_type')
+        test_case.tc_name = request.form.get('tc_name')
+        test_case.test_yn = 'Y' if request.form.get('test_yn') else 'N'
+        test_case.src_connection_id = request.form.get('src_connection_id') or None
+        test_case.tgt_connection_id = request.form.get('tgt_connection_id') or None
+        test_case.delimiter = request.form.get('delimiter')
+        test_case.filters = request.form.get('filters')
+        test_case.pk_columns = request.form.get('pk_columns')
+        test_case.date_fields = request.form.get('date_fields')
+        test_case.percentage_fields = request.form.get('percentage_fields')
+        test_case.threshold_percentage = request.form.get('threshold_percentage')
+        test_case.header_columns = request.form.get('header_columns')
+        test_case.skip_rows = request.form.get('skip_rows')
+        test_case.src_sheet_name = request.form.get('src_sheet_name')
+        test_case.tgt_sheet_name = request.form.get('tgt_sheet_name')
+        src_input_type = request.form.get('src_input_type')
+        tgt_input_type = request.form.get('tgt_input_type')
+        src_query = request.form.get('src_query')
+        tgt_query = request.form.get('tgt_query')
+
+        project_input_folder = os.path.join(team.project.folder_path, 'input') if team and team.project else current_app.config['UPLOAD_FOLDER']
+        os.makedirs(project_input_folder, exist_ok=True)
+
+        src_file = request.files.get('src_file')
+        if src_input_type == 'query' and src_query:
+            if test_case.src_data_file:
+                old_path = os.path.join(project_input_folder, test_case.src_data_file)
+                if os.path.exists(old_path):
+                    os.remove(old_path)
+            filename = f"{uuid.uuid4().hex}.sql"
+            with open(os.path.join(project_input_folder, filename), 'w') as f:
+                f.write(src_query)
+            test_case.src_data_file = filename
+        elif src_file and src_file.filename:
+            if test_case.src_data_file:
+                old_path = os.path.join(project_input_folder, test_case.src_data_file)
+                if os.path.exists(old_path):
+                    os.remove(old_path)
+            filename = f"{uuid.uuid4().hex}_{secure_filename(src_file.filename)}"
+            src_file.save(os.path.join(project_input_folder, filename))
+            test_case.src_data_file = filename
+
+        tgt_file = request.files.get('tgt_file')
+        if tgt_input_type == 'query' and tgt_query:
+            if test_case.tgt_data_file:
+                old_path = os.path.join(project_input_folder, test_case.tgt_data_file)
+                if os.path.exists(old_path):
+                    os.remove(old_path)
+            filename = f"{uuid.uuid4().hex}.sql"
+            with open(os.path.join(project_input_folder, filename), 'w') as f:
+                f.write(tgt_query)
+            test_case.tgt_data_file = filename
+        elif tgt_file and tgt_file.filename:
+            if test_case.tgt_data_file:
+                old_path = os.path.join(project_input_folder, test_case.tgt_data_file)
+                if os.path.exists(old_path):
+                    os.remove(old_path)
+            filename = f"{uuid.uuid4().hex}_{secure_filename(tgt_file.filename)}"
+            tgt_file.save(os.path.join(project_input_folder, filename))
+            test_case.tgt_data_file = filename
+
+        db.session.commit()
+
+        flash('Test case updated successfully', 'success')
+        return redirect(url_for('testcase_detail', testcase_id=test_case.id))
+
+    src_sql = None
+    tgt_sql = None
+    project_input_folder = os.path.join(team.project.folder_path, 'input') if team and team.project else current_app.config['UPLOAD_FOLDER']
+    if test_case.src_data_file:
+        src_path = os.path.join(project_input_folder, test_case.src_data_file)
+        if os.path.exists(src_path):
+            with open(src_path) as f:
+                src_sql = f.read()
+    if test_case.tgt_data_file:
+        tgt_path = os.path.join(project_input_folder, test_case.tgt_data_file)
+        if os.path.exists(tgt_path):
+            with open(tgt_path) as f:
+                tgt_sql = f.read()
+
+    return render_template('testcase_edit.html', team=team, test_case=test_case, connections=connections, src_sql=src_sql, tgt_sql=tgt_sql)

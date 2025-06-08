@@ -3,6 +3,7 @@ from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager
 from flask_mail import Mail
 from apscheduler.schedulers.background import BackgroundScheduler
+from sqlalchemy import or_
 import os
 
 # Initialize extensions
@@ -96,7 +97,9 @@ def create_app():
         team = Team.query.get_or_404(team_id)
         test_cases = TestCase.query.filter_by(team_id=team_id).all()
         users = team.users
-        available_users = User.query.filter(User.team_id != team_id).all()
+        available_users = User.query.filter(
+            or_(User.team_id.is_(None), User.team_id != team_id)
+        ).all()
         return render_template(
             'team_detail.html',
             team=team,
