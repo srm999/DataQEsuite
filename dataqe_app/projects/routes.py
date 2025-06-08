@@ -29,7 +29,6 @@ def project_detail(project_id):
     connections = getattr(project, 'connections', [])
     return render_template('project_detail.html', project=project, teams=teams, connections=connections)
 
-
 @projects_bp.route('/teams/new/<int:project_id>', methods=['GET', 'POST'])
 def new_team(project_id):
     """Create a new team for the given project."""
@@ -54,3 +53,4 @@ def new_connection(project_id):
         # Connection model is not implemented; simply return to project page
         return redirect(url_for('projects.project_detail', project_id=project_id))
     return render_template('connection_new.html', project=project)
+

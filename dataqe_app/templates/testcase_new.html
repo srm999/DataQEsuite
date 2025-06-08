@@ -16,7 +16,11 @@
                 <ol class="breadcrumb">
                     <li class="breadcrumb-item"><a href="{{ url_for('dashboard') }}">Dashboard</a></li>
                     {% if current_user.is_admin %}
+
                     <li class="breadcrumb-item"><a href="{{ url_for('projects.projects') }}">Projects</a></li>
+
+                    <li class="breadcrumb-item"><a href="{{ url_for('projects') }}">Projects</a></li>
+
                     <li class="breadcrumb-item"><a href="{{ url_for('projects.project_detail', project_id=team.project.id) }}">{{ team.project.name }}</a></li>
                     <li class="breadcrumb-item"><a href="{{ url_for('team_detail', team_id=team.id) }}">{{ team.name }}</a></li>
                     {% endif %}
