@@ -36,7 +36,7 @@
                                 {% for project in projects %}
                                 <tr>
                                     <td>{{ project.name }}</td>
-                                    <td>{{ project.description[:50] }}{% if project.description and project.description|length > 50 %}...{% endif %}</td>
+                                    <td>{{ project.description[:50] if project.description else '' }}{% if project.description and project.description|length > 50 %}...{% endif %}</td>
                                     <td>
                                         <span class="text-truncate d-inline-block" style="max-width: 200px;" title="{{ project.folder_path or 'N/A' }}">
                                             {{ project.folder_path or 'N/A' }}
