@@ -73,6 +73,7 @@
                                     </td>
                                     {% if current_user.is_admin %}
                                     <td>
+                                        <a href="{{ url_for('edit_user', user_id=user.id) }}" class="btn btn-sm btn-outline-primary me-1">Edit</a>
                                         <form action="{{ url_for('remove_team_member', team_id=team.id, user_id=user.id) }}" method="post" style="display: inline;">
                                             <button type="submit" class="btn btn-sm btn-outline-danger" onclick="return confirm('Remove this user from the team?')">Remove</button>
                                         </form>
