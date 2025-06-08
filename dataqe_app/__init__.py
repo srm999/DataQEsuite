@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, redirect, url_for
+from flask import Flask, render_template, request, redirect, url_for, flash
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager
 from flask_mail import Mail
@@ -11,6 +11,7 @@ login_manager = LoginManager()
 mail = Mail()
 background_scheduler = BackgroundScheduler()
 
+from dataqe_app.models import User, Team, Project, TestCase
 
 
 def create_app():
@@ -75,8 +76,9 @@ def create_app():
 
 
     @app.route('/users', endpoint='main.users')
-    def placeholder_users():
-        return render_template("user_dashboard.html")
+    def users():
+        all_users = User.query.all()
+        return render_template("users.html", users=all_users)
 
     @app.route('/dashboard', endpoint='main.dashboard')
     @app.route('/dashboard-legacy', endpoint='dashboard')
@@ -90,8 +92,35 @@ def create_app():
 
 
     @app.route('/teams/<int:team_id>', endpoint='team_detail')
-    def placeholder_team_detail(team_id):
-        return render_template('placeholder.html', title='Team Detail')
+    def team_detail(team_id):
+        team = Team.query.get_or_404(team_id)
+        test_cases = TestCase.query.filter_by(team_id=team_id).all()
+        users = team.users
+        available_users = User.query.filter(User.team_id != team_id).all()
+        return render_template(
+            'team_detail.html',
+            team=team,
+            test_cases=test_cases,
+            users=users,
+            available_users=available_users,
+        )
+
+    @app.route('/teams/<int:team_id>/add_member', methods=['POST'], endpoint='add_team_member')
+    def add_team_member(team_id):
+        user_id = request.form.get('user_id')
+        user = User.query.get_or_404(user_id)
+        user.team_id = team_id
+        db.session.commit()
+        flash('Member added successfully', 'success')
+        return redirect(url_for('team_detail', team_id=team_id))
+
+    @app.route('/teams/<int:team_id>/remove_member/<int:user_id>', methods=['POST'], endpoint='remove_team_member')
+    def remove_team_member(team_id, user_id):
+        user = User.query.get_or_404(user_id)
+        user.team_id = None
+        db.session.commit()
+        flash('Member removed', 'success')
+        return redirect(url_for('team_detail', team_id=team_id))
 
     @app.route('/testcase/<int:testcase_id>', endpoint='testcase_detail')
     @app.route('/testcase/<int:testcase_id>', endpoint='main.testcase_detail')
@@ -101,12 +130,50 @@ def create_app():
 
     @app.route('/users/<int:user_id>/edit', methods=['GET', 'POST'], endpoint='edit_user')
     @app.route('/users/<int:user_id>/edit', methods=['GET', 'POST'], endpoint='main.edit_user')
-    def placeholder_edit_user(user_id):
-        return render_template('placeholder.html', title='Edit User')
+    def edit_user(user_id):
+        user = User.query.get_or_404(user_id)
+        if request.method == 'POST':
+            user.username = request.form.get('username')
+            user.email = request.form.get('email')
+            password = request.form.get('password')
+            team_id = request.form.get('team_id')
+            user.is_admin = bool(request.form.get('is_admin'))
+            user.team_id = int(team_id) if team_id else None
+            if password:
+                user.set_password(password)
+            db.session.commit()
+            return redirect(url_for('main.users'))
+
+        projects = Project.query.all()
+        return render_template('user_edit.html', user=user, projects=projects)
 
     @app.route('/users/new', methods=['GET', 'POST'], endpoint='new_user')
     @app.route('/users/new', methods=['GET', 'POST'], endpoint='main.new_user')
-    def placeholder_new_user():
-        return render_template('placeholder.html', title='New User')
+    def new_user():
+        if request.method == 'POST':
+            username = request.form.get('username')
+            email = request.form.get('email')
+            password = request.form.get('password')
+            team_id = request.form.get('team_id')
+            is_admin = bool(request.form.get('is_admin'))
+
+            user = User(username=username, email=email, is_admin=is_admin)
+            user.set_password(password)
+            if team_id:
+                user.team_id = int(team_id)
+            db.session.add(user)
+            db.session.commit()
+            return redirect(url_for('main.users'))
+
+        projects = Project.query.all()
+        return render_template('user_new.html', projects=projects)
+
+    @app.route('/user/<int:user_id>/delete', methods=['POST'], endpoint='delete_user')
+    def delete_user(user_id):
+        user = User.query.get_or_404(user_id)
+        db.session.delete(user)
+        db.session.commit()
+        flash('User deleted', 'success')
+        return redirect(url_for('main.users'))
 
     return app
