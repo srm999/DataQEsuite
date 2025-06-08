@@ -161,6 +161,7 @@ def new_testcase():
         src_query = request.form.get('src_query')
         tgt_query = request.form.get('tgt_query')
 
+
         project_input_folder = os.path.join(team.project.folder_path, 'input') if team.project else current_app.config['UPLOAD_FOLDER']
         os.makedirs(project_input_folder, exist_ok=True)
 
@@ -184,6 +185,11 @@ def new_testcase():
                 f.write(tgt_query)
             tgt_data_file = filename
         elif tgt_file and tgt_file.filename:
+        if src_file and src_file.filename:
+            filename = f"{uuid.uuid4().hex}_{secure_filename(src_file.filename)}"
+            src_file.save(os.path.join(project_input_folder, filename))
+            src_data_file = filename
+        if tgt_file and tgt_file.filename:
             filename = f"{uuid.uuid4().hex}_{secure_filename(tgt_file.filename)}"
             tgt_file.save(os.path.join(project_input_folder, filename))
             tgt_data_file = filename
@@ -270,6 +276,8 @@ def edit_testcase(testcase_id):
                 f.write(src_query)
             test_case.src_data_file = filename
         elif src_file and src_file.filename:
+
+        if src_file and src_file.filename:
             if test_case.src_data_file:
                 old_path = os.path.join(project_input_folder, test_case.src_data_file)
                 if os.path.exists(old_path):
@@ -289,6 +297,8 @@ def edit_testcase(testcase_id):
                 f.write(tgt_query)
             test_case.tgt_data_file = filename
         elif tgt_file and tgt_file.filename:
+
+        if tgt_file and tgt_file.filename:
             if test_case.tgt_data_file:
                 old_path = os.path.join(project_input_folder, test_case.tgt_data_file)
                 if os.path.exists(old_path):
@@ -301,6 +311,7 @@ def edit_testcase(testcase_id):
 
         flash('Test case updated successfully', 'success')
         return redirect(url_for('testcase_detail', testcase_id=test_case.id))
+
 
     src_sql = None
     tgt_sql = None
@@ -317,3 +328,4 @@ def edit_testcase(testcase_id):
                 tgt_sql = f.read()
 
     return render_template('testcase_edit.html', team=team, test_case=test_case, connections=connections, src_sql=src_sql, tgt_sql=tgt_sql)
+
