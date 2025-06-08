@@ -66,8 +66,8 @@
                 <ol class="breadcrumb">
                     <li class="breadcrumb-item"><a href="{{ url_for('main.dashboard') }}">Dashboard</a></li>
                     {% if current_user.is_admin and test_case.team %}
-                    <li class="breadcrumb-item"><a href="{{ url_for('main.projects') }}">Projects</a></li>
-                    <li class="breadcrumb-item"><a href="{{ url_for('main.project_detail', project_id=test_case.team.project.id) }}">{{ test_case.team.project.name }}</a></li>
+                    <li class="breadcrumb-item"><a href="{{ url_for('projects.projects') }}">Projects</a></li>
+                    <li class="breadcrumb-item"><a href="{{ url_for('projects.project_detail', project_id=test_case.team.project.id) }}">{{ test_case.team.project.name }}</a></li>
                     <li class="breadcrumb-item"><a href="{{ url_for('team_detail', team_id=test_case.team.id) }}">{{ test_case.team.name }}</a></li>
                     {% endif %}
                     <li class="breadcrumb-item active">Test Case Details</li>
