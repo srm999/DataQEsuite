@@ -9,7 +9,7 @@
             <nav aria-label="breadcrumb">
                 <ol class="breadcrumb">
                     <li class="breadcrumb-item"><a href="{{ url_for('main.dashboard') }}">Dashboard</a></li>
-                    <li class="breadcrumb-item"><a href="{{ url_for('main.projects') }}">Projects</a></li>
+                    <li class="breadcrumb-item"><a href="{{ url_for('projects.projects') }}">Projects</a></li>
                     <li class="breadcrumb-item active">New Project</li>
                 </ol>
             </nav>
@@ -19,7 +19,7 @@
                     <h4 class="mb-0">Create New Project</h4>
                 </div>
                 <div class="card-body">
-                    <form action="{{ url_for('main.new_project') }}" method="post">
+                    <form action="{{ url_for('projects.new_project') }}" method="post">
                         <div class="mb-3">
                             <label for="name" class="form-label">Project Name</label>
                             <input type="text" class="form-control" id="name" name="name" required>
@@ -56,7 +56,7 @@
                         </div>
                         
                         <div class="d-flex justify-content-between mt-4">
-                            <a href="{{ url_for('main.projects') }}" class="btn btn-outline-secondary">Cancel</a>
+                            <a href="{{ url_for('projects.projects') }}" class="btn btn-outline-secondary">Cancel</a>
                             <button type="submit" class="btn btn-primary">Create Project</button>
                         </div>
                     </form>

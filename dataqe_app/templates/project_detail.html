@@ -9,7 +9,7 @@
             <nav aria-label="breadcrumb">
                 <ol class="breadcrumb">
                     <li class="breadcrumb-item"><a href="{{ url_for('dashboard') }}">Dashboard</a></li>
-                    <li class="breadcrumb-item"><a href="{{ url_for('projects') }}">Projects</a></li>
+                    <li class="breadcrumb-item"><a href="{{ url_for('projects.projects') }}">Projects</a></li>
                     <li class="breadcrumb-item active">{{ project.name }}</li>
                 </ol>
             </nav>
@@ -20,7 +20,7 @@
                     <p class="text-muted">{{ project.description }}</p>
                 </div>
                 <div>
-                    <a href="{{ url_for('projects') }}" class="btn btn-outline-secondary">Back to Projects</a>
+                    <a href="{{ url_for('projects.projects') }}" class="btn btn-outline-secondary">Back to Projects</a>
                 </div>
             </div>
             
