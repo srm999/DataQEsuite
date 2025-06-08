@@ -47,7 +47,7 @@ def create_app():
 
     # Register Blueprints
     from dataqe_app.auth.routes import auth_bp
-    from dataqe_app.testcases.routes import testcases_bp
+    from dataqe_app.testcases.routes import testcases_bp, testcase_detail
     from dataqe_app.executions.routes import executions_bp
     from dataqe_app.scheduler.routes import scheduler_bp
     from dataqe_app.default_route import main_bp
@@ -59,6 +59,18 @@ def create_app():
     app.register_blueprint(scheduler_bp)
     app.register_blueprint(main_bp)
     app.register_blueprint(projects_bp)
+
+    # Allow templates to reference testcase_detail without blueprint prefix
+    app.add_url_rule(
+        '/testcase/<int:testcase_id>',
+        endpoint='testcase_detail',
+        view_func=testcase_detail,
+    )
+    app.add_url_rule(
+        '/testcase/<int:testcase_id>',
+        endpoint='main.testcase_detail',
+        view_func=testcase_detail,
+    )
 
     @app.cli.command("init-db")
     def init_db_command():
@@ -125,11 +137,6 @@ def create_app():
         flash('Member removed', 'success')
         return redirect(url_for('team_detail', team_id=team_id))
 
-    @app.route('/testcase/<int:testcase_id>', endpoint='testcase_detail')
-    @app.route('/testcase/<int:testcase_id>', endpoint='main.testcase_detail')
-    @app.route('/testcase/<int:testcase_id>', endpoint='testcases.testcase_detail')
-    def placeholder_testcase_detail(testcase_id):
-        return render_template('placeholder.html', title='Testcase Detail')
 
     @app.route('/users/<int:user_id>/edit', methods=['GET', 'POST'], endpoint='edit_user')
     @app.route('/users/<int:user_id>/edit', methods=['GET', 'POST'], endpoint='main.edit_user')

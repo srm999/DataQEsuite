@@ -292,6 +292,47 @@ def edit_testcase(testcase_id):
                 old_path = os.path.join(project_input_folder, test_case.tgt_data_file)
                 if os.path.exists(old_path):
                     os.remove(old_path)
+
+@testcases_bp.route('/testcase/<int:testcase_id>', methods=['GET'])
+@login_required
+def testcase_detail(testcase_id):
+    """Display detailed information about a test case."""
+    test_case = TestCase.query.get_or_404(testcase_id)
+
+    if not current_user.is_admin and current_user.team_id != test_case.team_id:
+        flash('Access denied', 'error')
+        return redirect(url_for('dashboard'))
+
+    project_input_folder = os.path.join(
+        test_case.team.project.folder_path, 'input'
+    ) if test_case.team and test_case.team.project else current_app.config['UPLOAD_FOLDER']
+    src_sql = None
+    tgt_sql = None
+    if test_case.src_data_file:
+        src_path = os.path.join(project_input_folder, test_case.src_data_file)
+        if os.path.exists(src_path):
+            with open(src_path) as f:
+                src_sql = f.read()
+    if test_case.tgt_data_file:
+        tgt_path = os.path.join(project_input_folder, test_case.tgt_data_file)
+        if os.path.exists(tgt_path):
+            with open(tgt_path) as f:
+                tgt_sql = f.read()
+
+    sorted_executions = sorted(
+        test_case.executions,
+        key=lambda e: e.execution_time or datetime.min,
+        reverse=True
+    )
+
+    return render_template(
+        'testcase_detail.html',
+        test_case=test_case,
+        src_sql=src_sql,
+        tgt_sql=tgt_sql,
+        sorted_executions=sorted_executions[:10]
+    )
+
             filename = f"{uuid.uuid4().hex}.sql"
             with open(os.path.join(project_input_folder, filename), 'w') as f:
                 f.write(tgt_query)

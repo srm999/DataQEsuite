@@ -140,6 +140,38 @@ def test_edit_testcase_route(tmp_path):
 
         # existing file for query
         old_query = proj_folder / 'input' / 'old.sql'
+
+def test_testcase_detail_route(tmp_path):
+    app = create_app()
+    with app.app_context():
+        db.drop_all()
+        db.create_all()
+        folder = tmp_path / "proj3"
+        folder.mkdir(parents=True)
+        (folder / "input").mkdir()
+        project = Project(name='Demo', folder_path=str(folder))
+        team = Team(name='TeamX')
+        db.session.add_all([project, team])
+        db.session.commit()
+        project.team_id = team.id
+        user = User(username='u', email='u@example.com')
+        user.set_password('pwd')
+        user.team_id = team.id
+        db.session.add(user)
+        tc = TestCaseModel(tcid='TC2', table_name='tbl', test_type='CCD_Validation', team_id=team.id)
+        db.session.add(tc)
+        db.session.commit()
+        uid = user.id
+        tcid = tc.id
+
+    with app.test_client() as client:
+        login(client, uid)
+        resp = client.get(f'/testcase/{tcid}')
+        assert resp.status_code == 200
+        html = resp.data.decode()
+        assert 'Test Case Details' in html
+        assert 'TC2' in html
+
         old_query.write_text('old src')
         tc = TestCaseModel(
             tcid='TC1',
