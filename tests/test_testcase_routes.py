@@ -114,6 +114,7 @@ def test_new_testcase_route(tmp_path):
             },
             follow_redirects=True
         )
+
         resp = client.post(f'/testcase/new?team_id={tid}', data={
             'tcid': 'TC1',
             'tc_name': 'Test',
@@ -184,6 +185,7 @@ def test_edit_testcase_route(tmp_path):
             },
             follow_redirects=True
         )
+
         resp = client.post(f'/testcase/{tcid}/edit', data={
             'tcid': 'TC1',
             'tc_name': 'NewName',

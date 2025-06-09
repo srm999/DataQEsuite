@@ -27,8 +27,16 @@ def project_detail(project_id):
     project = Project.query.get_or_404(project_id)
     connections = getattr(project, 'connections', [])
     users = project.users
+    test_cases = project.test_cases
     available_users = User.query.filter(~User.projects.any(id=project_id)).all()
-    return render_template('project_detail.html', project=project, users=users, connections=connections, available_users=available_users)
+    return render_template(
+        'project_detail.html',
+        project=project,
+        users=users,
+        connections=connections,
+        test_cases=test_cases,
+        available_users=available_users,
+    )
 
 
 
