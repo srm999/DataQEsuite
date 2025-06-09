@@ -102,7 +102,67 @@
                     </div>
                 </div>
             </div>
-            
+
+            <!-- Test Cases Section -->
+            <div class="row">
+                <div class="col-12 mb-4">
+                    <div class="card">
+                        <div class="card-header d-flex justify-content-between align-items-center">
+                            <h5 class="mb-0">Test Cases</h5>
+                            <a href="{{ url_for('testcases.new_testcase') }}?project_id={{ project.id }}" class="btn btn-sm btn-primary">Add Test Case</a>
+                        </div>
+                        <div class="card-body p-0">
+                            <div class="table-responsive">
+                                <table class="table table-hover">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th>ID</th>
+                                            <th>Table</th>
+                                            <th>Type</th>
+                                            <th>Status</th>
+                                            <th>SRC Connection</th>
+                                            <th>TGT Connection</th>
+                                            <th>Created By</th>
+                                            <th>Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for test_case in test_cases %}
+                                        <tr>
+                                            <td>{{ test_case.tcid }}</td>
+                                            <td>{{ test_case.table_name }}</td>
+                                            <td>{{ test_case.test_type }}</td>
+                                            <td>
+                                                {% if test_case.test_yn == 'Y' %}
+                                                <span class="badge bg-success">Active</span>
+                                                {% else %}
+                                                <span class="badge bg-secondary">Inactive</span>
+                                                {% endif %}
+                                            </td>
+                                            <td>{{ test_case.src_connection.name if test_case.src_connection else 'N/A' }}</td>
+                                            <td>{{ test_case.tgt_connection.name if test_case.tgt_connection else 'N/A' }}</td>
+                                            <td>{{ test_case.creator.username if test_case.creator else 'Unknown' }}</td>
+                                            <td>
+                                                <a href="{{ url_for('testcase_detail', testcase_id=test_case.id) }}" class="btn btn-sm btn-outline-primary">View</a>
+                                                <a href="{{ url_for('testcases.edit_testcase', testcase_id=test_case.id) }}" class="btn btn-sm btn-outline-secondary">Edit</a>
+                                            </td>
+                                        </tr>
+                                        {% else %}
+                                        <tr>
+                                            <td colspan="8" class="text-center">
+                                                No test cases created yet.
+                                                <a href="{{ url_for('testcases.new_testcase') }}?project_id={{ project.id }}">Create your first test case</a>
+                                            </td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
         </div>
 </div>
 </div>

@@ -37,7 +37,7 @@ from dataqe_app import create_app, db, login_manager
 def load_user(user_id):
     return None
 
-from dataqe_app.models import Project, User
+from dataqe_app.models import Project, User, TestCase as TestCaseModel
 
 
 
@@ -64,6 +64,8 @@ def test_project_detail_page():
         assert response.status_code == 200
         assert b'Demo Project' in response.data
         assert b'Delete Project' in response.data
+        assert b'Test Cases' in response.data
+        assert b'Create your first test case' in response.data
 
 
 
@@ -120,5 +122,55 @@ def test_delete_project_route():
         assert resp.status_code == 200
         with app.app_context():
             assert Project.query.get(pid) is None
+
+
+def test_project_detail_shows_test_cases():
+    app = create_app()
+
+    @app.route('/testcase/new', endpoint='new_testcase')
+    def new_testcase():
+        return 'new'
+
+    with app.app_context():
+        db.drop_all()
+        db.create_all()
+        project = Project(name='Demo', folder_path='fp')
+        db.session.add(project)
+        db.session.commit()
+        tc = TestCaseModel(tcid='TC1', table_name='tbl', test_type='CCD', project_id=project.id)
+        db.session.add(tc)
+        db.session.commit()
+        pid = project.id
+
+    with app.test_client() as client:
+        resp = client.get(f'/projects/{pid}')
+        assert resp.status_code == 200
+        html = resp.data.decode()
+        assert 'Test Cases' in html
+        assert 'TC1' in html
+
+
+def test_projects_page_user_count():
+    app = create_app()
+
+    with app.app_context():
+        db.drop_all()
+        db.create_all()
+        project = Project(name='UserCount')
+        u1 = User(username='u1', email='u1@example.com')
+        u1.set_password('pwd')
+        u2 = User(username='u2', email='u2@example.com')
+        u2.set_password('pwd')
+        project.users.append(u1)
+        project.users.append(u2)
+        db.session.add_all([project, u1, u2])
+        db.session.commit()
+
+    with app.test_client() as client:
+        resp = client.get('/projects')
+        assert resp.status_code == 200
+        html = resp.data.decode()
+        assert '<th>Users</th>' in html
+        assert '2' in html
 
 
