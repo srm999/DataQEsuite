@@ -72,6 +72,7 @@ class TestCase(db.Model):
     project_id = db.Column(db.Integer, db.ForeignKey('project.id'))
     project = db.relationship('Project', backref='test_cases')
 
+
 class TestExecution(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     test_case_id = db.Column(db.Integer, db.ForeignKey('test_case.id'))
