@@ -35,21 +35,31 @@ from dataqe_app import create_app, db, login_manager
 
 @login_manager.user_loader
 def load_user(user_id):
-    return None
+    return User.query.get(int(user_id))
 
-from dataqe_app.models import Project, Connection
+def login(client, user_id):
+    with client.session_transaction() as sess:
+        sess['_user_id'] = str(user_id)
+
+from dataqe_app.models import Project, Connection, User
 
 
 def test_connection_creation():
     app = create_app()
     with app.app_context():
+        db.drop_all()
         db.create_all()
         project = Project(name='Conn Save Project')
-        db.session.add(project)
+        user = User(username='u', email='u@example.com')
+        user.set_password('pwd')
+        project.users.append(user)
+        db.session.add_all([project, user])
         db.session.commit()
         pid = project.id
+        uid = user.id
 
     with app.test_client() as client:
+        login(client, uid)
         resp = client.post(
             f'/connections/new/{pid}',
             data={

@@ -27,7 +27,7 @@
                                     <th>Name</th>
                                     <th>Description</th>
                                     <th>Folder Path</th>
-                                    <th>Teams</th>
+                                    <th>Users</th>
                                     <th>Connections</th>
                                     <th>Actions</th>
                                 </tr>
@@ -42,7 +42,7 @@
                                             {{ project.folder_path or 'N/A' }}
                                         </span>
                                     </td>
-                                    <td>{{ project.teams|length if project.teams else 0 }}</td>
+                                    <td>{{ project.users|length if project.users else 0 }}</td>
                                     <td>{{ project.connections|length if project.connections else 0 }}</td>
                                     <td>
                                         <a href="{{ url_for('projects.project_detail', project_id=project.id) }}" class="btn btn-sm btn-outline-primary">Manage</a>
