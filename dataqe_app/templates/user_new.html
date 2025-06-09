@@ -36,15 +36,10 @@
                         </div>
                         
                         <div class="mb-3">
-                            <label for="team_id" class="form-label">Assign to Team</label>
-                            <select class="form-select" id="team_id" name="team_id">
-                                <option value="">No Team (Admin Only)</option>
+                            <label for="project_ids" class="form-label">Assign to Projects</label>
+                            <select multiple class="form-select" id="project_ids" name="project_ids">
                                 {% for project in projects %}
-                                    <optgroup label="{{ project.name }}">
-                                        {% for team in project.teams %}
-                                            <option value="{{ team.id }}">{{ team.name }}</option>
-                                        {% endfor %}
-                                    </optgroup>
+                                    <option value="{{ project.id }}">{{ project.name }}</option>
                                 {% endfor %}
                             </select>
                         </div>

@@ -33,29 +33,24 @@ import apscheduler.schedulers.background
 apscheduler.schedulers.background.BackgroundScheduler.start = lambda self, *a, **k: None
 
 from dataqe_app import create_app, db, login_manager
-from dataqe_app.models import Project, Team, User, Connection, TestCase as TestCaseModel
+from dataqe_app.models import Project, User, Connection, TestCase as TestCaseModel
 
 
 
-@login_manager.user_loader
-def load_user(user_id):
-    return User.query.get(int(user_id))
+        db.session.add(project)
+        project.users.append(user)
+        pid = project.id
+        get_resp = client.get(f'/testcase/new?project_id={pid}')
+            f'/testcase/new?project_id={pid}',
+            assert tc.project_id == pid
 
-def login(client, user_id):
-    with client.session_transaction() as sess:
-        sess['_user_id'] = str(user_id)
-
-
-def test_new_testcase_route(tmp_path):
-    app = create_app()
-    with app.app_context():
-        db.drop_all()
-        db.create_all()
-        project_folder = tmp_path / "proj"
-        project_folder.mkdir(parents=True)
-        (project_folder / "input").mkdir()
-        project = Project(name='Demo', folder_path=str(project_folder))
-        team = Team(name='Team1')
+        project = Project(name='Demo', folder_path=str(proj_folder))
+        db.session.add(project)
+        project.users.append(user)
+            project_id=project.id,
+        db.session.add(project)
+        project.users.append(user)
+        tc = TestCaseModel(tcid='TC2', table_name='tbl', test_type='CCD_Validation', project_id=project.id)
         db.session.add_all([project, team])
         db.session.commit()
         project.team_id = team.id

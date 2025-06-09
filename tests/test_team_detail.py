@@ -40,10 +40,10 @@ def login(client, user_id):
     with client.session_transaction() as sess:
         sess['_user_id'] = str(user_id)
 
-from dataqe_app.models import Project, Team, User
+from dataqe_app.models import Project, User
 
 
-def test_team_detail_page():
+def test_project_detail_page_shows_members():
     app = create_app()
 
     @app.route('/testcase/new', endpoint='new_testcase')
@@ -54,21 +54,17 @@ def test_team_detail_page():
         db.drop_all()
         db.create_all()
         project = Project(name='Demo')
-        team = Team(name='Alpha')
-        db.session.add_all([project, team])
-        db.session.commit()
-        project.team_id = team.id
         user = User(username='u1', email='u1@example.com')
         user.set_password('pass')
-        user.team_id = team.id
-        db.session.add(user)
+        db.session.add_all([project, user])
         db.session.commit()
-        tid = team.id
+        project.users.append(user)
+        db.session.commit()
+        pid = project.id
 
     with app.test_client() as client:
-        resp = client.get(f'/teams/{tid}')
+        resp = client.get(f'/projects/{pid}')
         assert resp.status_code == 200
-        assert b'Alpha' in resp.data
         assert b'u1@example.com' in resp.data
 
 
@@ -82,8 +78,6 @@ def test_available_users_listed():
     with app.app_context():
         db.drop_all()
         db.create_all()
-        team = Team(name='Delta')
-        db.session.add(team)
         project = Project(name='Demo')
         db.session.add(project)
         admin = User(username='admin', email='a@example.com', is_admin=True)
@@ -92,21 +86,20 @@ def test_available_users_listed():
         db.session.commit()
         u1 = User(username='m1', email='m1@example.com')
         u1.set_password('pwd')
-        u1.team_id = team.id
         u2 = User(username='m2', email='m2@example.com')
         u2.set_password('pwd')
         u3 = User(username='m3', email='m3@example.com')
         u3.set_password('pwd')
         db.session.add_all([u1, u2, u3])
         db.session.commit()
-        project.team_id = team.id
+        project.users.append(u1)
         db.session.commit()
-        tid = team.id
+        pid = project.id
         admin_id = admin.id
 
     with app.test_client() as client:
         login(client, admin_id)
-        resp = client.get(f'/teams/{tid}')
+        resp = client.get(f'/projects/{pid}')
         assert resp.status_code == 200
         html = resp.data.decode()
         options = "".join(line.strip() for line in html.splitlines() if "<option" in line)
@@ -125,19 +118,19 @@ def test_add_member_route():
     with app.app_context():
         db.drop_all()
         db.create_all()
-        team = Team(name='Beta')
+        project = Project(name='BetaProj')
         user = User(username='u2', email='u2@example.com')
         user.set_password('pwd')
-        db.session.add_all([team, user])
+        db.session.add_all([project, user])
         db.session.commit()
-        tid = team.id
+        pid = project.id
         uid = user.id
 
     with app.test_client() as client:
-        resp = client.post(f'/teams/{tid}/add_member', data={'user_id': uid}, follow_redirects=True)
+        resp = client.post(f'/projects/{pid}/add_member', data={'user_id': uid}, follow_redirects=True)
         assert resp.status_code == 200
         with app.app_context():
-            assert User.query.get(uid).team_id == tid
+            assert user in Project.query.get(pid).users
 
 
 def test_remove_member_route():
@@ -149,21 +142,21 @@ def test_remove_member_route():
 
     with app.app_context():
         db.create_all()
-        team = Team(name='Gamma')
+        project = Project(name='GammaProj')
         user = User(username='u3', email='u3@example.com')
         user.set_password('pwd3')
-        db.session.add_all([team, user])
+        project.users.append(user)
+        db.session.add(project)
+        db.session.add(user)
         db.session.commit()
-        user.team_id = team.id
-        db.session.commit()
-        tid = team.id
+        pid = project.id
         uid = user.id
 
     with app.test_client() as client:
-        resp = client.post(f'/teams/{tid}/remove_member/{uid}', follow_redirects=True)
+        resp = client.post(f'/projects/{pid}/remove_member/{uid}', follow_redirects=True)
         assert resp.status_code == 200
         with app.app_context():
-            assert User.query.get(uid).team_id is None
+            assert user not in Project.query.get(pid).users
 
 
 def test_edit_user_route():
@@ -185,7 +178,7 @@ def test_edit_user_route():
     with app.test_client() as client:
         resp = client.post(
             f'/users/{uid}/edit',
-            data={'username': 'new', 'email': 'new@example.com', 'password': 'newpwd', 'team_id': '', 'is_admin': ''},
+            data={'username': 'new', 'email': 'new@example.com', 'password': 'newpwd', 'project_ids': '', 'is_admin': ''},
             follow_redirects=True,
         )
         assert resp.status_code == 200
