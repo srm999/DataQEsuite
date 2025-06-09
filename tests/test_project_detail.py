@@ -37,9 +37,8 @@ from dataqe_app import create_app, db, login_manager
 def load_user(user_id):
     return None
 
+
 from dataqe_app.models import Project, User, TestCase as TestCaseModel
-
-
 
 def test_project_detail_page():
     app = create_app()
