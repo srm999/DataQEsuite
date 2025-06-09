@@ -3,6 +3,7 @@ from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager
 from flask_mail import Mail
 from apscheduler.schedulers.background import BackgroundScheduler
+from sqlalchemy import or_
 import os
 
 # Initialize extensions
@@ -11,7 +12,7 @@ login_manager = LoginManager()
 mail = Mail()
 background_scheduler = BackgroundScheduler()
 
-from dataqe_app.models import User, Team, Project, TestCase
+from dataqe_app.models import User, Project, TestCase
 
 
 def create_app():
@@ -46,7 +47,7 @@ def create_app():
 
     # Register Blueprints
     from dataqe_app.auth.routes import auth_bp
-    from dataqe_app.testcases.routes import testcases_bp
+    from dataqe_app.testcases.routes import testcases_bp, testcase_detail
     from dataqe_app.executions.routes import executions_bp
     from dataqe_app.scheduler.routes import scheduler_bp
     from dataqe_app.default_route import main_bp
@@ -58,6 +59,18 @@ def create_app():
     app.register_blueprint(scheduler_bp)
     app.register_blueprint(main_bp)
     app.register_blueprint(projects_bp)
+
+    # Allow templates to reference testcase_detail without blueprint prefix
+    app.add_url_rule(
+        '/testcase/<int:testcase_id>',
+        endpoint='testcase_detail',
+        view_func=testcase_detail,
+    )
+    app.add_url_rule(
+        '/testcase/<int:testcase_id>',
+        endpoint='main.testcase_detail',
+        view_func=testcase_detail,
+    )
 
     @app.cli.command("init-db")
     def init_db_command():
@@ -91,42 +104,7 @@ def create_app():
         return render_template("results_dashboard.html")
 
 
-    @app.route('/teams/<int:team_id>', endpoint='team_detail')
-    def team_detail(team_id):
-        team = Team.query.get_or_404(team_id)
-        test_cases = TestCase.query.filter_by(team_id=team_id).all()
-        users = team.users
-        available_users = User.query.filter(User.team_id != team_id).all()
-        return render_template(
-            'team_detail.html',
-            team=team,
-            test_cases=test_cases,
-            users=users,
-            available_users=available_users,
-        )
 
-    @app.route('/teams/<int:team_id>/add_member', methods=['POST'], endpoint='add_team_member')
-    def add_team_member(team_id):
-        user_id = request.form.get('user_id')
-        user = User.query.get_or_404(user_id)
-        user.team_id = team_id
-        db.session.commit()
-        flash('Member added successfully', 'success')
-        return redirect(url_for('team_detail', team_id=team_id))
-
-    @app.route('/teams/<int:team_id>/remove_member/<int:user_id>', methods=['POST'], endpoint='remove_team_member')
-    def remove_team_member(team_id, user_id):
-        user = User.query.get_or_404(user_id)
-        user.team_id = None
-        db.session.commit()
-        flash('Member removed', 'success')
-        return redirect(url_for('team_detail', team_id=team_id))
-
-    @app.route('/testcase/<int:testcase_id>', endpoint='testcase_detail')
-    @app.route('/testcase/<int:testcase_id>', endpoint='main.testcase_detail')
-    @app.route('/testcase/<int:testcase_id>', endpoint='testcases.testcase_detail')
-    def placeholder_testcase_detail(testcase_id):
-        return render_template('placeholder.html', title='Testcase Detail')
 
     @app.route('/users/<int:user_id>/edit', methods=['GET', 'POST'], endpoint='edit_user')
     @app.route('/users/<int:user_id>/edit', methods=['GET', 'POST'], endpoint='main.edit_user')
@@ -136,9 +114,9 @@ def create_app():
             user.username = request.form.get('username')
             user.email = request.form.get('email')
             password = request.form.get('password')
-            team_id = request.form.get('team_id')
+            project_ids = request.form.getlist('project_ids')
             user.is_admin = bool(request.form.get('is_admin'))
-            user.team_id = int(team_id) if team_id else None
+            user.projects = Project.query.filter(Project.id.in_(project_ids)).all()
             if password:
                 user.set_password(password)
             db.session.commit()
@@ -154,13 +132,12 @@ def create_app():
             username = request.form.get('username')
             email = request.form.get('email')
             password = request.form.get('password')
-            team_id = request.form.get('team_id')
+            project_ids = request.form.getlist('project_ids')
             is_admin = bool(request.form.get('is_admin'))
 
             user = User(username=username, email=email, is_admin=is_admin)
             user.set_password(password)
-            if team_id:
-                user.team_id = int(team_id)
+            user.projects = Project.query.filter(Project.id.in_(project_ids)).all()
             db.session.add(user)
             db.session.commit()
             return redirect(url_for('main.users'))
