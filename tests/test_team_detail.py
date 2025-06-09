@@ -37,12 +37,11 @@ def load_user(user_id):
     return User.query.get(int(user_id))
 
 
-from dataqe_app.models import Project, User
 def login(client, user_id):
     with client.session_transaction() as sess:
         sess['_user_id'] = str(user_id)
 
-
+from dataqe_app.models import Project, User
 
 def test_project_detail_page_shows_members():
     app = create_app()

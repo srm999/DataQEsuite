@@ -3,8 +3,7 @@ from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager
 from flask_mail import Mail
 from apscheduler.schedulers.background import BackgroundScheduler
-from sqlalchemy import or_, inspect
-
+from sqlalchemy import or_, inspect, text
 import os
 
 # Initialize extensions
@@ -52,7 +51,8 @@ def create_app():
         if 'test_case' in inspector.get_table_names():
             cols = [c['name'] for c in inspector.get_columns('test_case')]
             if 'project_id' not in cols:
-                db.session.execute('ALTER TABLE test_case ADD COLUMN project_id INTEGER')
+                db.session.execute(text('ALTER TABLE test_case ADD COLUMN project_id INTEGER'))
+
                 db.session.commit()
         db.create_all()
 
@@ -147,7 +147,6 @@ def create_app():
         db.session.commit()
         flash('Member removed', 'success')
         return redirect(url_for('team_detail', team_id=team_id))
-
 
     @app.route('/users/<int:user_id>/edit', methods=['GET', 'POST'], endpoint='edit_user')
     @app.route('/users/<int:user_id>/edit', methods=['GET', 'POST'], endpoint='main.edit_user')

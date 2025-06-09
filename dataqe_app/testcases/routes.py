@@ -139,7 +139,6 @@ def new_testcase():
 
     connections = project.connections
 
-
     if request.method == 'POST':
         tcid = request.form.get('tcid')
         table_name = request.form.get('table_name')
@@ -190,7 +189,6 @@ def new_testcase():
             filename = f"{uuid.uuid4().hex}_{secure_filename(tgt_file.filename)}"
             tgt_file.save(os.path.join(project_input_folder, filename))
             tgt_data_file = filename
-
 
             if src_file and src_file.filename:
                 filename = f"{uuid.uuid4().hex}_{secure_filename(src_file.filename)}"
@@ -272,7 +270,6 @@ def edit_testcase(testcase_id):
         src_query = request.form.get('src_query')
         tgt_query = request.form.get('tgt_query')
 
-
         project_input_folder = os.path.join(project.folder_path, 'input')
         os.makedirs(project_input_folder, exist_ok=True)
 
@@ -297,8 +294,6 @@ def edit_testcase(testcase_id):
             test_case.src_data_file = filename
 
 
-
-
             if src_file and src_file.filename:
                 if test_case.src_data_file:
                     old_path = os.path.join(project_input_folder, test_case.src_data_file)
@@ -307,7 +302,6 @@ def edit_testcase(testcase_id):
                 filename = f"{uuid.uuid4().hex}_{secure_filename(src_file.filename)}"
                 src_file.save(os.path.join(project_input_folder, filename))
                 test_case.src_data_file = filename
-
 
         tgt_file = request.files.get('tgt_file')
         if tgt_input_type == 'query' and tgt_query:
@@ -329,7 +323,6 @@ def edit_testcase(testcase_id):
             tgt_file.save(os.path.join(project_input_folder, filename))
             test_case.tgt_data_file = filename
 
-
             if tgt_file and tgt_file.filename:
                 if test_case.tgt_data_file:
                     old_path = os.path.join(project_input_folder, test_case.tgt_data_file)
@@ -338,7 +331,6 @@ def edit_testcase(testcase_id):
                 filename = f"{uuid.uuid4().hex}_{secure_filename(tgt_file.filename)}"
                 tgt_file.save(os.path.join(project_input_folder, filename))
                 test_case.tgt_data_file = filename
-
 
 
         db.session.commit()

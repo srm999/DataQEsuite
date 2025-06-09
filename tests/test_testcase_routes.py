@@ -70,6 +70,7 @@ def test_new_testcase_route(tmp_path):
         login(client, uid)
         # verify dropdown shows connections
         get_resp = client.get(f'/testcase/new?project_id={pid}')
+
         team = Team(name='Team1')
         db.session.add_all([project, team])
         db.session.commit()
@@ -113,8 +114,6 @@ def test_new_testcase_route(tmp_path):
             },
             follow_redirects=True
         )
-
-
         resp = client.post(f'/testcase/new?team_id={tid}', data={
             'tcid': 'TC1',
             'tc_name': 'Test',
@@ -122,7 +121,6 @@ def test_new_testcase_route(tmp_path):
             'test_type': 'CCD_Validation',
             'delimiter': ','
         }, follow_redirects=True)
-
 
 
         assert resp.status_code == 200
@@ -165,9 +163,6 @@ def test_edit_testcase_route(tmp_path):
             project_id=project.id,
             src_data_file='old.sql'
         )
-
-        tc = TestCaseModel(tcid='TC1', tc_name='Old', table_name='tbl', test_type='CCD_Validation', team_id=team.id)
-
         db.session.add(tc)
         db.session.commit()
         uid = user.id
@@ -189,14 +184,12 @@ def test_edit_testcase_route(tmp_path):
             },
             follow_redirects=True
         )
-
         resp = client.post(f'/testcase/{tcid}/edit', data={
             'tcid': 'TC1',
             'tc_name': 'NewName',
             'table_name': 'tbl2',
             'test_type': 'CCD_Validation'
         }, follow_redirects=True)
-
 
         assert resp.status_code == 200
         with app.app_context():
