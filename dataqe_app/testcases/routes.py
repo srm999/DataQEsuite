@@ -188,6 +188,15 @@ def new_testcase():
             tgt_file.save(os.path.join(project_input_folder, filename))
             tgt_data_file = filename
 
+            if src_file and src_file.filename:
+                filename = f"{uuid.uuid4().hex}_{secure_filename(src_file.filename)}"
+                src_file.save(os.path.join(project_input_folder, filename))
+                src_data_file = filename
+            if tgt_file and tgt_file.filename:
+                filename = f"{uuid.uuid4().hex}_{secure_filename(tgt_file.filename)}"
+                tgt_file.save(os.path.join(project_input_folder, filename))
+                tgt_data_file = filename
+
         test_case = TestCase(
             tcid=tcid,
             tc_name=tc_name,
@@ -217,7 +226,6 @@ def new_testcase():
         flash('Test case created successfully', 'success')
         return redirect(url_for('projects.project_detail', project_id=project.id))
     return render_template('testcase_new.html', project=project, connections=connections)
-
 
 @testcases_bp.route('/testcase/<int:testcase_id>/edit', methods=['GET', 'POST'], endpoint='edit_testcase')
 @login_required
@@ -277,6 +285,15 @@ def edit_testcase(testcase_id):
             src_file.save(os.path.join(project_input_folder, filename))
             test_case.src_data_file = filename
 
+            if src_file and src_file.filename:
+                if test_case.src_data_file:
+                    old_path = os.path.join(project_input_folder, test_case.src_data_file)
+                    if os.path.exists(old_path):
+                        os.remove(old_path)
+                filename = f"{uuid.uuid4().hex}_{secure_filename(src_file.filename)}"
+                src_file.save(os.path.join(project_input_folder, filename))
+                test_case.src_data_file = filename
+
         tgt_file = request.files.get('tgt_file')
         if tgt_input_type == 'query' and tgt_query:
             if test_case.tgt_data_file:
@@ -288,6 +305,7 @@ def edit_testcase(testcase_id):
                 f.write(tgt_query)
             test_case.tgt_data_file = filename
         elif tgt_file and tgt_file.filename:
+
             if test_case.tgt_data_file:
                 old_path = os.path.join(project_input_folder, test_case.tgt_data_file)
                 if os.path.exists(old_path):
@@ -295,6 +313,17 @@ def edit_testcase(testcase_id):
             filename = f"{uuid.uuid4().hex}_{secure_filename(tgt_file.filename)}"
             tgt_file.save(os.path.join(project_input_folder, filename))
             test_case.tgt_data_file = filename
+
+
+            if tgt_file and tgt_file.filename:
+                if test_case.tgt_data_file:
+                    old_path = os.path.join(project_input_folder, test_case.tgt_data_file)
+                    if os.path.exists(old_path):
+                        os.remove(old_path)
+                filename = f"{uuid.uuid4().hex}_{secure_filename(tgt_file.filename)}"
+                tgt_file.save(os.path.join(project_input_folder, filename))
+                test_case.tgt_data_file = filename
+
 
         db.session.commit()
 
@@ -304,6 +333,7 @@ def edit_testcase(testcase_id):
     src_sql = None
     tgt_sql = None
     project_input_folder = os.path.join(project.folder_path, 'input')
+
     if test_case.src_data_file:
         src_path = os.path.join(project_input_folder, test_case.src_data_file)
         if os.path.exists(src_path):
@@ -324,12 +354,14 @@ def testcase_detail(testcase_id):
     test_case = TestCase.query.get_or_404(testcase_id)
 
     if not current_user.is_admin and current_user not in test_case.project.users:
+
         flash('Access denied', 'error')
         return redirect(url_for('dashboard'))
 
     project_input_folder = os.path.join(
         test_case.project.folder_path, 'input'
     )
+
     src_sql = None
     tgt_sql = None
     if test_case.src_data_file:
@@ -356,4 +388,5 @@ def testcase_detail(testcase_id):
         tgt_sql=tgt_sql,
         sorted_executions=sorted_executions[:10]
     )
+
 
