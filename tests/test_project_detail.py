@@ -37,13 +37,12 @@ from dataqe_app import create_app, db, login_manager
 def load_user(user_id):
     return User.query.get(int(user_id))
 
+
 def login(client, user_id):
     with client.session_transaction() as sess:
         sess['_user_id'] = str(user_id)
 
 from dataqe_app.models import Project, User, TestCase as TestCaseModel
-
-
 
 def test_project_detail_page():
     app = create_app()
@@ -189,6 +188,7 @@ def test_projects_page_user_count():
         assert '2' in html
 
 
+
 def test_projects_link_in_nav_for_user():
     app = create_app()
 
@@ -208,5 +208,4 @@ def test_projects_link_in_nav_for_user():
         resp = client.get('/results-dashboard')
         assert resp.status_code == 200
         assert b'Projects' in resp.data
-
 

@@ -70,6 +70,29 @@ def test_new_testcase_route(tmp_path):
         login(client, uid)
         # verify dropdown shows connections
         get_resp = client.get(f'/testcase/new?project_id={pid}')
+        team = Team(name='Team1')
+        db.session.add_all([project, team])
+        db.session.commit()
+        project.team_id = team.id
+
+        conn1 = Connection(name='SrcConn', project_id=project.id)
+        conn2 = Connection(name='TgtConn', project_id=project.id)
+        db.session.add_all([conn1, conn2])
+
+
+        user = User(username='u', email='u@example.com')
+        user.set_password('pwd')
+        user.team_id = team.id
+        db.session.add(user)
+        db.session.commit()
+        uid = user.id
+        tid = team.id
+
+    with app.test_client() as client:
+        login(client, uid)
+
+        # verify dropdown shows connections
+        get_resp = client.get(f'/testcase/new?team_id={tid}')
         assert get_resp.status_code == 200
         html = get_resp.data.decode()
         assert 'SrcConn' in html and 'TgtConn' in html
@@ -89,6 +112,15 @@ def test_new_testcase_route(tmp_path):
             },
             follow_redirects=True
         )
+
+        resp = client.post(f'/testcase/new?team_id={tid}', data={
+            'tcid': 'TC1',
+            'tc_name': 'Test',
+            'table_name': 'tbl',
+            'test_type': 'CCD_Validation',
+            'delimiter': ','
+        }, follow_redirects=True)
+
         assert resp.status_code == 200
         with app.app_context():
             tc = TestCaseModel.query.filter_by(tcid='TC1').first()
@@ -150,6 +182,12 @@ def test_edit_testcase_route(tmp_path):
             },
             follow_redirects=True
         )
+        resp = client.post(f'/testcase/{tcid}/edit', data={
+            'tcid': 'TC1',
+            'tc_name': 'NewName',
+            'table_name': 'tbl2',
+            'test_type': 'CCD_Validation'
+        }, follow_redirects=True)
         assert resp.status_code == 200
         with app.app_context():
             updated = TestCaseModel.query.get(tcid)
