@@ -1,7 +1,7 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify, current_app
 from flask_login import login_required, current_user
 from dataqe_app import db
-from dataqe_app.models import TestCase, ScheduledTest, TestExecution, TestMismatch, User, Team
+from dataqe_app.models import TestCase, ScheduledTest, TestExecution, TestMismatch, User, Project
 from dataqe_app.utils.helpers import run_scheduled_test
 from datetime import datetime
 import os
@@ -17,13 +17,13 @@ testcases_bp = Blueprint('testcases', __name__)
 def delete_testcase(testcase_id):
     test_case = TestCase.query.get_or_404(testcase_id)
 
-    if not current_user.is_admin and current_user.team_id != test_case.team_id:
+    if not current_user.is_admin and current_user not in test_case.project.users:
         flash('Access denied', 'error')
         return redirect(url_for('dashboard'))
 
-    team_id = test_case.team_id
+    project_id = test_case.project_id
     tcid = test_case.tcid
-    project = test_case.team.project
+    project = test_case.project
     project_input_folder = os.path.join(project.folder_path, 'input')
 
     # Delete source and target files if they exist
@@ -53,7 +53,7 @@ def delete_testcase(testcase_id):
     db.session.commit()
 
     flash(f'Test case {tcid} deleted successfully', 'success')
-    return redirect(url_for('dashboard') if not current_user.is_admin else url_for('team_detail', team_id=team_id))
+    return redirect(url_for('dashboard') if not current_user.is_admin else url_for('projects.project_detail', project_id=project_id))
 
 
 @testcases_bp.route('/schedule/create/<int:test_case_id>', methods=['GET', 'POST'])
@@ -61,7 +61,7 @@ def delete_testcase(testcase_id):
 def create_schedule(test_case_id):
     test_case = TestCase.query.get_or_404(test_case_id)
 
-    if not current_user.is_admin and current_user.team_id != test_case.team_id:
+    if not current_user.is_admin and current_user not in test_case.project.users:
         flash('Access denied')
         return redirect(url_for('dashboard'))
 
@@ -125,18 +125,20 @@ def debug_last_execution():
 @login_required
 def new_testcase():
     """Create a new test case."""
-    team_id = request.args.get('team_id') or request.form.get('team_id') or current_user.team_id
-    if not team_id:
-        flash('Team not specified', 'error')
+
+    project_id = request.args.get('project_id') or request.form.get('project_id')
+    if not project_id:
+        flash('Project not specified', 'error')
         return redirect(url_for('dashboard'))
 
-    team = Team.query.get_or_404(team_id)
+    project = Project.query.get_or_404(project_id)
 
-    if not current_user.is_admin and current_user.team_id != team.id:
+    if not current_user.is_admin and current_user not in project.users:
         flash('Access denied', 'error')
         return redirect(url_for('dashboard'))
 
-    connections = team.project.connections if team.project else []
+    connections = project.connections
+
 
     if request.method == 'POST':
         tcid = request.form.get('tcid')
@@ -162,7 +164,8 @@ def new_testcase():
         tgt_query = request.form.get('tgt_query')
 
 
-        project_input_folder = os.path.join(team.project.folder_path, 'input') if team.project else current_app.config['UPLOAD_FOLDER']
+        project_input_folder = os.path.join(project.folder_path, 'input')
+
         os.makedirs(project_input_folder, exist_ok=True)
 
         src_file = request.files.get('src_file')
@@ -190,6 +193,7 @@ def new_testcase():
             tgt_file.save(os.path.join(project_input_folder, filename))
             tgt_data_file = filename
 
+
             if src_file and src_file.filename:
                 filename = f"{uuid.uuid4().hex}_{secure_filename(src_file.filename)}"
                 src_file.save(os.path.join(project_input_folder, filename))
@@ -198,6 +202,7 @@ def new_testcase():
                 filename = f"{uuid.uuid4().hex}_{secure_filename(tgt_file.filename)}"
                 tgt_file.save(os.path.join(project_input_folder, filename))
                 tgt_data_file = filename
+
 
 
         test_case = TestCase(
@@ -220,16 +225,19 @@ def new_testcase():
             skip_rows=skip_rows,
             src_sheet_name=src_sheet_name,
             tgt_sheet_name=tgt_sheet_name,
-            team_id=team.id,
+
+            project_id=project.id,
+
             creator_id=current_user.id,
         )
         db.session.add(test_case)
         db.session.commit()
 
         flash('Test case created successfully', 'success')
-        return redirect(url_for('team_detail', team_id=team.id))
 
-    return render_template('testcase_new.html', team=team, connections=connections)
+        return redirect(url_for('projects.project_detail', project_id=project.id))
+    return render_template('testcase_new.html', project=project, connections=connections)
+
 
 
 @testcases_bp.route('/testcase/<int:testcase_id>/edit', methods=['GET', 'POST'], endpoint='edit_testcase')
@@ -238,12 +246,14 @@ def edit_testcase(testcase_id):
     """Edit an existing test case."""
     test_case = TestCase.query.get_or_404(testcase_id)
 
-    if not current_user.is_admin and current_user.team_id != test_case.team_id:
+
+    if not current_user.is_admin and current_user not in test_case.project.users:
         flash('Access denied', 'error')
         return redirect(url_for('dashboard'))
 
-    team = test_case.team
-    connections = team.project.connections if team and team.project else []
+    project = test_case.project
+    connections = project.connections
+
 
     if request.method == 'POST':
         test_case.tcid = request.form.get('tcid')
@@ -268,7 +278,9 @@ def edit_testcase(testcase_id):
         src_query = request.form.get('src_query')
         tgt_query = request.form.get('tgt_query')
 
-        project_input_folder = os.path.join(team.project.folder_path, 'input') if team and team.project else current_app.config['UPLOAD_FOLDER']
+
+        project_input_folder = os.path.join(project.folder_path, 'input')
+
         os.makedirs(project_input_folder, exist_ok=True)
 
         src_file = request.files.get('src_file')
@@ -292,6 +304,7 @@ def edit_testcase(testcase_id):
             test_case.src_data_file = filename
 
 
+
             if src_file and src_file.filename:
                 if test_case.src_data_file:
                     old_path = os.path.join(project_input_folder, test_case.src_data_file)
@@ -300,6 +313,7 @@ def edit_testcase(testcase_id):
                 filename = f"{uuid.uuid4().hex}_{secure_filename(src_file.filename)}"
                 src_file.save(os.path.join(project_input_folder, filename))
                 test_case.src_data_file = filename
+
 
 
         tgt_file = request.files.get('tgt_file')
@@ -323,6 +337,7 @@ def edit_testcase(testcase_id):
             test_case.tgt_data_file = filename
 
 
+
             if tgt_file and tgt_file.filename:
                 if test_case.tgt_data_file:
                     old_path = os.path.join(project_input_folder, test_case.tgt_data_file)
@@ -333,6 +348,7 @@ def edit_testcase(testcase_id):
                 test_case.tgt_data_file = filename
 
 
+
         db.session.commit()
 
         flash('Test case updated successfully', 'success')
@@ -341,7 +357,8 @@ def edit_testcase(testcase_id):
 
     src_sql = None
     tgt_sql = None
-    project_input_folder = os.path.join(team.project.folder_path, 'input') if team and team.project else current_app.config['UPLOAD_FOLDER']
+    project_input_folder = os.path.join(project.folder_path, 'input')
+
     if test_case.src_data_file:
         src_path = os.path.join(project_input_folder, test_case.src_data_file)
         if os.path.exists(src_path):
@@ -353,7 +370,7 @@ def edit_testcase(testcase_id):
             with open(tgt_path) as f:
                 tgt_sql = f.read()
 
-    return render_template('testcase_edit.html', team=team, test_case=test_case, connections=connections, src_sql=src_sql, tgt_sql=tgt_sql)
+    return render_template('testcase_edit.html', project=project, test_case=test_case, connections=connections, src_sql=src_sql, tgt_sql=tgt_sql)
 
 
 @testcases_bp.route('/testcase/<int:testcase_id>', methods=['GET'])
@@ -362,13 +379,17 @@ def testcase_detail(testcase_id):
     """Display detailed information about a test case."""
     test_case = TestCase.query.get_or_404(testcase_id)
 
-    if not current_user.is_admin and current_user.team_id != test_case.team_id:
+
+    if not current_user.is_admin and current_user not in test_case.project.users:
+
         flash('Access denied', 'error')
         return redirect(url_for('dashboard'))
 
     project_input_folder = os.path.join(
-        test_case.team.project.folder_path, 'input'
-    ) if test_case.team and test_case.team.project else current_app.config['UPLOAD_FOLDER']
+        test_case.project.folder_path, 'input'
+    )
+
+
     src_sql = None
     tgt_sql = None
     if test_case.src_data_file:

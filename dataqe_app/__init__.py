@@ -12,7 +12,7 @@ login_manager = LoginManager()
 mail = Mail()
 background_scheduler = BackgroundScheduler()
 
-from dataqe_app.models import User, Team, Project, TestCase
+from dataqe_app.models import User, Project, TestCase
 
 
 def create_app():
@@ -104,6 +104,7 @@ def create_app():
         return render_template("results_dashboard.html")
 
 
+
     @app.route('/teams/<int:team_id>', endpoint='team_detail')
     def team_detail(team_id):
         team = Team.query.get_or_404(team_id)
@@ -138,6 +139,7 @@ def create_app():
         return redirect(url_for('team_detail', team_id=team_id))
 
 
+
     @app.route('/users/<int:user_id>/edit', methods=['GET', 'POST'], endpoint='edit_user')
     @app.route('/users/<int:user_id>/edit', methods=['GET', 'POST'], endpoint='main.edit_user')
     def edit_user(user_id):
@@ -146,9 +148,9 @@ def create_app():
             user.username = request.form.get('username')
             user.email = request.form.get('email')
             password = request.form.get('password')
-            team_id = request.form.get('team_id')
+            project_ids = request.form.getlist('project_ids')
             user.is_admin = bool(request.form.get('is_admin'))
-            user.team_id = int(team_id) if team_id else None
+            user.projects = Project.query.filter(Project.id.in_(project_ids)).all()
             if password:
                 user.set_password(password)
             db.session.commit()
@@ -164,13 +166,12 @@ def create_app():
             username = request.form.get('username')
             email = request.form.get('email')
             password = request.form.get('password')
-            team_id = request.form.get('team_id')
+            project_ids = request.form.getlist('project_ids')
             is_admin = bool(request.form.get('is_admin'))
 
             user = User(username=username, email=email, is_admin=is_admin)
             user.set_password(password)
-            if team_id:
-                user.team_id = int(team_id)
+            user.projects = Project.query.filter(Project.id.in_(project_ids)).all()
             db.session.add(user)
             db.session.commit()
             return redirect(url_for('main.users'))
