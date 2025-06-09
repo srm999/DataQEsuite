@@ -3,7 +3,7 @@ from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager
 from flask_mail import Mail
 from apscheduler.schedulers.background import BackgroundScheduler
-from sqlalchemy import or_
+from sqlalchemy import or_, inspect
 import os
 
 # Initialize extensions
@@ -44,6 +44,16 @@ def create_app():
     login_manager.login_view = 'auth.login'
     mail.init_app(app)
     background_scheduler.start()
+
+    # Perform simple migrations for older databases
+    with app.app_context():
+        inspector = inspect(db.engine)
+        if 'test_case' in inspector.get_table_names():
+            cols = [c['name'] for c in inspector.get_columns('test_case')]
+            if 'project_id' not in cols:
+                db.session.execute('ALTER TABLE test_case ADD COLUMN project_id INTEGER')
+                db.session.commit()
+        db.create_all()
 
     # Register Blueprints
     from dataqe_app.auth.routes import auth_bp
