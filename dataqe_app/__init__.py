@@ -52,7 +52,6 @@ def create_app():
             cols = [c['name'] for c in inspector.get_columns('test_case')]
             if 'project_id' not in cols:
                 db.session.execute(text('ALTER TABLE test_case ADD COLUMN project_id INTEGER'))
-
                 db.session.commit()
         db.create_all()
 
@@ -113,7 +112,6 @@ def create_app():
     @app.route('/results-dashboard', endpoint='results_dashboard')
     def placeholder_results_dashboard():
         return render_template("results_dashboard.html")
-
 
     @app.route('/teams/<int:team_id>', endpoint='team_detail')
     def team_detail(team_id):

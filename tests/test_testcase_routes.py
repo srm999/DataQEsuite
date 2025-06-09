@@ -70,7 +70,6 @@ def test_new_testcase_route(tmp_path):
         login(client, uid)
         # verify dropdown shows connections
         get_resp = client.get(f'/testcase/new?project_id={pid}')
-
         team = Team(name='Team1')
         db.session.add_all([project, team])
         db.session.commit()
@@ -185,7 +184,6 @@ def test_edit_testcase_route(tmp_path):
             },
             follow_redirects=True
         )
-
         resp = client.post(f'/testcase/{tcid}/edit', data={
             'tcid': 'TC1',
             'tc_name': 'NewName',
