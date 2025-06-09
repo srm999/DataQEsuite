@@ -308,14 +308,14 @@ def new_testcase():
         return redirect(url_for('projects.project_detail', project_id=project.id))
     return render_template('testcase_new.html', project=project, connections=connections)
 
-            if src_file and src_file.filename:
-                filename = f"{uuid.uuid4().hex}_{secure_filename(src_file.filename)}"
-                src_file.save(os.path.join(project_input_folder, filename))
-                src_data_file = filename
-            if tgt_file and tgt_file.filename:
-                filename = f"{uuid.uuid4().hex}_{secure_filename(tgt_file.filename)}"
-                tgt_file.save(os.path.join(project_input_folder, filename))
-                tgt_data_file = filename
+    if src_file and src_file.filename:
+        filename = f"{uuid.uuid4().hex}_{secure_filename(src_file.filename)}"
+        src_file.save(os.path.join(project_input_folder, filename))
+        src_data_file = filename
+    if tgt_file and tgt_file.filename:
+        filename = f"{uuid.uuid4().hex}_{secure_filename(tgt_file.filename)}"
+        tgt_file.save(os.path.join(project_input_folder, filename))
+        tgt_data_file = filename
 
         test_case = TestCase(
             tcid=tcid,
