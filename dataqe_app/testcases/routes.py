@@ -217,7 +217,7 @@ def new_testcase():
         flash('Test case created successfully', 'success')
         return redirect(url_for('projects.project_detail', project_id=project.id))
     return render_template('testcase_new.html', project=project, connections=connections)
-        return redirect(url_for('dashboard'))
+    return redirect(url_for('dashboard'))
 
     project = Project.query.get_or_404(project_id)
 
