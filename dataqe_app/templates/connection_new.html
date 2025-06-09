@@ -11,12 +11,8 @@
                 <ol class="breadcrumb">
                     <li class="breadcrumb-item"><a href="{{ url_for('dashboard') }}">Dashboard</a></li>
                     {% if current_user.is_authenticated %}
-                        {% if current_user.is_admin %}
-                            <li class="breadcrumb-item"><a href="{{ url_for('projects.projects') }}">Projects</a></li>
-                            <li class="breadcrumb-item"><a href="{{ url_for('projects.project_detail', project_id=project.id) }}">{{ project.name }}</a></li>
-                        {% else %}
-                            <li class="breadcrumb-item"><a href="{{ url_for('team_detail', team_id=current_user.team.id) }}">{{ current_user.team.name }}</a></li>
-                        {% endif %}
+                        <li class="breadcrumb-item"><a href="{{ url_for('projects.projects') }}">Projects</a></li>
+                        <li class="breadcrumb-item"><a href="{{ url_for('projects.project_detail', project_id=project.id) }}">{{ project.name }}</a></li>
                     {% endif %}
                     <li class="breadcrumb-item active">New Connection</li>
                 </ol>
@@ -72,13 +68,7 @@
                         </div>
                         
                         <div class="d-flex justify-content-between mt-4">
-                            {% if current_user.is_authenticated and current_user.is_admin %}
-                                <a href="{{ url_for('projects.project_detail', project_id=project.id) }}" class="btn btn-outline-secondary">Cancel</a>
-                            {% elif current_user.is_authenticated %}
-                                <a href="{{ url_for('team_detail', team_id=current_user.team.id) }}" class="btn btn-outline-secondary">Cancel</a>
-                            {% else %}
-                                <a href="{{ url_for('projects.project_detail', project_id=project.id) }}" class="btn btn-outline-secondary">Cancel</a>
-                            {% endif %}
+                            <a href="{{ url_for('projects.project_detail', project_id=project.id) }}" class="btn btn-outline-secondary">Cancel</a>
                             <button type="submit" class="btn btn-primary">Create Connection</button>
                         </div>
                     </form>

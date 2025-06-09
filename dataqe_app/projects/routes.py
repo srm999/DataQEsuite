@@ -1,6 +1,6 @@
 from flask import Blueprint, render_template, request, redirect, url_for
 from dataqe_app import db
-from dataqe_app.models import Project, Team, Connection
+from dataqe_app.models import Project, Connection, User
 
 projects_bp = Blueprint('projects', __name__)
 
@@ -25,24 +25,19 @@ def new_project():
 @projects_bp.route('/projects/<int:project_id>')
 def project_detail(project_id):
     project = Project.query.get_or_404(project_id)
-    teams = [project.team] if getattr(project, 'team', None) else []
     connections = getattr(project, 'connections', [])
-    return render_template('project_detail.html', project=project, teams=teams, connections=connections)
+    users = project.users
+    test_cases = project.test_cases
+    available_users = User.query.filter(~User.projects.any(id=project_id)).all()
+    return render_template(
+        'project_detail.html',
+        project=project,
+        users=users,
+        connections=connections,
+        test_cases=test_cases,
+        available_users=available_users,
+    )
 
-@projects_bp.route('/teams/new/<int:project_id>', methods=['GET', 'POST'])
-def new_team(project_id):
-    """Create a new team for the given project."""
-    project = Project.query.get_or_404(project_id)
-    if request.method == 'POST':
-        name = request.form.get('name')
-        if name:
-            team = Team(name=name)
-            db.session.add(team)
-            db.session.flush()
-            project.team_id = team.id
-            db.session.commit()
-            return redirect(url_for('projects.project_detail', project_id=project_id))
-    return render_template('team_new.html', project=project)
 
 
 @projects_bp.route('/connections/new/<int:project_id>', methods=['GET', 'POST'])
@@ -80,4 +75,27 @@ def delete_project(project_id):
     db.session.delete(project)
     db.session.commit()
     return redirect(url_for('projects.projects'))
+
+
+@projects_bp.route('/projects/<int:project_id>/add_member', methods=['POST'])
+def add_project_member(project_id):
+    """Assign an existing user to the project."""
+    user_id = request.form.get('user_id')
+    project = Project.query.get_or_404(project_id)
+    user = User.query.get_or_404(user_id)
+    if user not in project.users:
+        project.users.append(user)
+        db.session.commit()
+    return redirect(url_for('projects.project_detail', project_id=project_id))
+
+
+@projects_bp.route('/projects/<int:project_id>/remove_member/<int:user_id>', methods=['POST'])
+def remove_project_member(project_id, user_id):
+    """Remove a user from the project."""
+    project = Project.query.get_or_404(project_id)
+    user = User.query.get_or_404(user_id)
+    if user in project.users:
+        project.users.remove(user)
+        db.session.commit()
+    return redirect(url_for('projects.project_detail', project_id=project_id))
 

@@ -11,9 +11,9 @@ executions_bp = Blueprint('executions', __name__)
 @login_required
 def execution_detail(execution_id):
     execution = TestExecution.query.get_or_404(execution_id)
-    if not current_user.is_admin and current_user.team_id != execution.test_case.team_id:
+    if not current_user.is_admin and execution.test_case.project not in current_user.projects:
         flash('Access denied')
-        return redirect(url_for('dashboard'))
+        return redirect(url_for('executions.results_dashboard'))
 
     mismatches = TestMismatch.query.filter_by(execution_id=execution_id).all()
 
@@ -35,9 +35,13 @@ def execution_history():
     if current_user.is_admin:
         executions = TestExecution.query.order_by(TestExecution.execution_time.desc()).paginate(page=page, per_page=20)
     else:
-        executions = TestExecution.query.join(TestCase).filter(
-            TestCase.team_id == current_user.team_id
-        ).order_by(TestExecution.execution_time.desc()).paginate(page=page, per_page=20)
+        project_ids = [p.id for p in current_user.projects]
+        executions = (
+            TestExecution.query.join(TestCase)
+            .filter(TestCase.project_id.in_(project_ids))
+            .order_by(TestExecution.execution_time.desc())
+            .paginate(page=page, per_page=20)
+        )
 
     return render_template('execution_history.html', executions=executions)
 
@@ -51,22 +55,53 @@ def results_dashboard():
         failed_executions = TestExecution.query.filter_by(status='FAILED').count()
         error_executions = TestExecution.query.filter_by(status='ERROR').count()
         recent_executions = TestExecution.query.order_by(TestExecution.execution_time.desc()).limit(10).all()
-        problem_tests = db.session.query(
-            TestCase,
-            func.count(TestExecution.id).label('failure_count')
-        ).join(TestExecution).filter(
-            TestExecution.status == 'FAILED'
-        ).group_by(TestCase).order_by(func.count(TestExecution.id).desc()).limit(5).all()
+        problem_tests = (
+            db.session.query(TestCase, func.count(TestExecution.id).label('failure_count'))
+            .join(TestExecution)
+            .filter(TestExecution.status == 'FAILED')
+            .group_by(TestCase)
+            .order_by(func.count(TestExecution.id).desc())
+            .limit(5)
+            .all()
+        )
     else:
-        total_executions = TestExecution.query.join(TestCase).filter(TestCase.team_id == current_user.team_id).count()
-        passed_executions = TestExecution.query.join(TestCase).filter(TestCase.team_id == current_user.team_id, TestExecution.status == 'PASSED').count()
-        failed_executions = TestExecution.query.join(TestCase).filter(TestCase.team_id == current_user.team_id, TestExecution.status == 'FAILED').count()
-        error_executions = TestExecution.query.join(TestCase).filter(TestCase.team_id == current_user.team_id, TestExecution.status == 'ERROR').count()
-        recent_executions = TestExecution.query.join(TestCase).filter(TestCase.team_id == current_user.team_id).order_by(TestExecution.execution_time.desc()).limit(10).all()
-        problem_tests = db.session.query(
-            TestCase,
-            func.count(TestExecution.id).label('failure_count')
-        ).join(TestExecution).filter(TestCase.team_id == current_user.team_id, TestExecution.status == 'FAILED').group_by(TestCase).order_by(func.count(TestExecution.id).desc()).limit(5).all()
+        project_ids = [p.id for p in current_user.projects]
+        total_executions = (
+            TestExecution.query.join(TestCase)
+            .filter(TestCase.project_id.in_(project_ids))
+            .count()
+        )
+        passed_executions = (
+            TestExecution.query.join(TestCase)
+            .filter(TestCase.project_id.in_(project_ids), TestExecution.status == 'PASSED')
+            .count()
+        )
+        failed_executions = (
+            TestExecution.query.join(TestCase)
+            .filter(TestCase.project_id.in_(project_ids), TestExecution.status == 'FAILED')
+            .count()
+        )
+        error_executions = (
+            TestExecution.query.join(TestCase)
+            .filter(TestCase.project_id.in_(project_ids), TestExecution.status == 'ERROR')
+            .count()
+        )
+        recent_executions = (
+            TestExecution.query.join(TestCase)
+            .filter(TestCase.project_id.in_(project_ids))
+            .order_by(TestExecution.execution_time.desc())
+            .limit(10)
+            .all()
+        )
+        problem_tests = (
+            db.session.query(TestCase, func.count(TestExecution.id).label('failure_count'))
+            .join(TestExecution)
+            .filter(TestCase.project_id.in_(project_ids), TestExecution.status == 'FAILED')
+            .group_by(TestCase)
+            .order_by(func.count(TestExecution.id).desc())
+            .limit(5)
+            .all()
+        )
 
     return render_template('results_dashboard.html',
                            total_executions=total_executions,
@@ -81,9 +116,9 @@ def results_dashboard():
 @login_required
 def download_log(execution_id):
     execution = TestExecution.query.get_or_404(execution_id)
-    if not current_user.is_admin and current_user.team_id != execution.test_case.team_id:
+    if not current_user.is_admin and execution.test_case.project not in current_user.projects:
         flash('Access denied')
-        return redirect(url_for('dashboard'))
+        return redirect(url_for('executions.results_dashboard'))
 
     if not execution.log_file or not os.path.exists(execution.log_file):
         flash('Log file not found', 'error')
