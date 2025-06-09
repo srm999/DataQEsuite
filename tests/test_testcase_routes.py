@@ -99,7 +99,6 @@ def test_new_testcase_route(tmp_path):
 
         resp = client.post(
             f'/testcase/new?project_id={pid}',
-
             data={
                 'tcid': 'TC1',
                 'tc_name': 'Test',
@@ -121,7 +120,6 @@ def test_new_testcase_route(tmp_path):
             'test_type': 'CCD_Validation',
             'delimiter': ','
         }, follow_redirects=True)
-
 
         assert resp.status_code == 200
         with app.app_context():
@@ -190,7 +188,6 @@ def test_edit_testcase_route(tmp_path):
             'table_name': 'tbl2',
             'test_type': 'CCD_Validation'
         }, follow_redirects=True)
-
         assert resp.status_code == 200
         with app.app_context():
             updated = TestCaseModel.query.get(tcid)

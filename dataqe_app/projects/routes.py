@@ -1,12 +1,17 @@
-from flask import Blueprint, render_template, request, redirect, url_for
+from flask import Blueprint, render_template, request, redirect, url_for, flash
+from flask_login import login_required, current_user
 from dataqe_app import db
 from dataqe_app.models import Project, Connection, User
 
 projects_bp = Blueprint('projects', __name__)
 
 @projects_bp.route('/projects')
+@login_required
 def projects():
-    projects = Project.query.all()
+    if current_user.is_admin:
+        projects = Project.query.all()
+    else:
+        projects = current_user.projects
     return render_template('projects.html', projects=projects)
 
 @projects_bp.route('/projects/new', methods=['GET', 'POST'])
@@ -41,9 +46,13 @@ def project_detail(project_id):
 
 
 @projects_bp.route('/connections/new/<int:project_id>', methods=['GET', 'POST'])
+@login_required
 def new_connection(project_id):
     """Create a new connection for the given project."""
     project = Project.query.get_or_404(project_id)
+    if not current_user.is_admin and current_user not in project.users:
+        flash('Access denied', 'error')
+        return redirect(url_for('projects.project_detail', project_id=project_id))
     if request.method == 'POST':
         name = request.form.get('name')
         server = request.form.get('server')

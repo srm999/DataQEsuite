@@ -35,8 +35,12 @@ from dataqe_app import create_app, db, login_manager
 
 @login_manager.user_loader
 def load_user(user_id):
-    return None
+    return User.query.get(int(user_id))
 
+
+def login(client, user_id):
+    with client.session_transaction() as sess:
+        sess['_user_id'] = str(user_id)
 
 from dataqe_app.models import Project, User, TestCase as TestCaseModel
 
@@ -94,14 +98,23 @@ def test_new_connection_route():
         db.drop_all()
         db.create_all()
         project = Project(name='Conn Project')
-        db.session.add(project)
+        user = User(username='u', email='u@example.com')
+        user.set_password('pwd')
+        project.users.append(user)
+        db.session.add_all([project, user])
         db.session.commit()
         pid = project.id
+        uid = user.id
 
     with app.test_client() as client:
+        login(client, uid)
         resp = client.get(f'/connections/new/{pid}')
         assert resp.status_code == 200
-        resp = client.post(f'/connections/new/{pid}', data={'name': 'conn'}, follow_redirects=True)
+        resp = client.post(
+            f'/connections/new/{pid}',
+            data={'name': 'conn', 'server': 's', 'database': 'd'},
+            follow_redirects=True,
+        )
         assert resp.status_code == 200
 
 
@@ -164,12 +177,35 @@ def test_projects_page_user_count():
         project.users.append(u2)
         db.session.add_all([project, u1, u2])
         db.session.commit()
+        uid = u1.id
 
     with app.test_client() as client:
+        login(client, uid)
         resp = client.get('/projects')
         assert resp.status_code == 200
         html = resp.data.decode()
         assert '<th>Users</th>' in html
         assert '2' in html
 
+
+
+def test_projects_link_in_nav_for_user():
+    app = create_app()
+
+    with app.app_context():
+        db.drop_all()
+        db.create_all()
+        project = Project(name='NavProj')
+        user = User(username='nav', email='nav@example.com')
+        user.set_password('pwd')
+        project.users.append(user)
+        db.session.add_all([project, user])
+        db.session.commit()
+        uid = user.id
+
+    with app.test_client() as client:
+        login(client, uid)
+        resp = client.get('/results-dashboard')
+        assert resp.status_code == 200
+        assert b'Projects' in resp.data
 
