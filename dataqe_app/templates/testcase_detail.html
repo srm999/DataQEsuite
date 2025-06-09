@@ -65,10 +65,9 @@
             <nav aria-label="breadcrumb">
                 <ol class="breadcrumb">
                     <li class="breadcrumb-item"><a href="{{ url_for('main.dashboard') }}">Dashboard</a></li>
-                    {% if current_user.is_admin and test_case.team %}
+                    {% if current_user.is_admin and test_case.project %}
                     <li class="breadcrumb-item"><a href="{{ url_for('projects.projects') }}">Projects</a></li>
-                    <li class="breadcrumb-item"><a href="{{ url_for('projects.project_detail', project_id=test_case.team.project.id) }}">{{ test_case.team.project.name }}</a></li>
-                    <li class="breadcrumb-item"><a href="{{ url_for('team_detail', team_id=test_case.team.id) }}">{{ test_case.team.name }}</a></li>
+                    <li class="breadcrumb-item"><a href="{{ url_for('projects.project_detail', project_id=test_case.project.id) }}">{{ test_case.project.name }}</a></li>
                     {% endif %}
                     <li class="breadcrumb-item active">Test Case Details</li>
                 </ol>
@@ -96,9 +95,9 @@
                     <button type="button" class="btn btn-outline-danger me-2" data-bs-toggle="modal" data-bs-target="#deleteModal">
                         <i class="bi bi-trash"></i> Delete
                     </button>
-                    {% if current_user.is_admin and test_case.team %}
-                    <a href="{{ url_for('team_detail', team_id=test_case.team_id) }}" class="btn btn-outline-secondary">
-                        <i class="bi bi-arrow-left"></i> Back to Team
+                    {% if current_user.is_admin and test_case.project %}
+                    <a href="{{ url_for('projects.project_detail', project_id=test_case.project_id) }}" class="btn btn-outline-secondary">
+                        <i class="bi bi-arrow-left"></i> Back to Project
                     </a>
                     {% else %}
                     <a href="{{ url_for('main.dashboard') }}" class="btn btn-outline-secondary">

@@ -37,7 +37,7 @@ from dataqe_app import create_app, db, login_manager
 def load_user(user_id):
     return None
 
-from dataqe_app.models import Project, Team
+from dataqe_app.models import Project, User
 
 
 
@@ -46,16 +46,13 @@ def test_project_detail_page():
 
 
 
-    @app.route('/teams/new/<int:project_id>')
-    def new_team(project_id):
-        return 'new team'
-
     @app.route('/connections/new/<int:project_id>')
     def new_connection(project_id):
         return 'new connection'
 
 
     with app.app_context():
+        db.drop_all()
         db.create_all()
         project = Project(name='Demo Project', description='desc')
         db.session.add(project)
@@ -70,26 +67,30 @@ def test_project_detail_page():
 
 
 
-def test_new_team_route():
+def test_add_member_route():
     app = create_app()
     with app.app_context():
+        db.drop_all()
         db.create_all()
         project = Project(name='Team Project')
-        db.session.add(project)
+        user = User(username='u', email='u@example.com')
+        user.set_password('pwd')
+        db.session.add_all([project, user])
         db.session.commit()
         pid = project.id
+        uid = user.id
 
     with app.test_client() as client:
-        resp = client.get(f'/teams/new/{pid}')
+        resp = client.post(f'/projects/{pid}/add_member', data={'user_id': uid}, follow_redirects=True)
         assert resp.status_code == 200
-        resp = client.post(f'/teams/new/{pid}', data={'name': 'Alpha'}, follow_redirects=True)
-        assert resp.status_code == 200
-        assert b'Alpha' in resp.data
+        with app.app_context():
+            assert user in Project.query.get(pid).users
 
 
 def test_new_connection_route():
     app = create_app()
     with app.app_context():
+        db.drop_all()
         db.create_all()
         project = Project(name='Conn Project')
         db.session.add(project)
@@ -107,6 +108,7 @@ def test_delete_project_route():
     app = create_app()
 
     with app.app_context():
+        db.drop_all()
         db.create_all()
         project = Project(name='Delete Me')
         db.session.add(project)
