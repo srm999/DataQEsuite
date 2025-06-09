@@ -36,6 +36,12 @@ from dataqe_app import create_app, db, login_manager
 def load_user(user_id):
     return User.query.get(int(user_id))
 
+
+def login(client, user_id):
+    with client.session_transaction() as sess:
+        sess['_user_id'] = str(user_id)
+
+
 def login(client, user_id):
     with client.session_transaction() as sess:
         sess['_user_id'] = str(user_id)
@@ -92,6 +98,7 @@ def test_available_users_listed():
         u3.set_password('pwd')
         db.session.add_all([u1, u2, u3])
         db.session.commit()
+
         project.users.append(u1)
         db.session.commit()
         pid = project.id
@@ -99,6 +106,7 @@ def test_available_users_listed():
 
     with app.test_client() as client:
         login(client, admin_id)
+
         resp = client.get(f'/projects/{pid}')
         assert resp.status_code == 200
         html = resp.data.decode()

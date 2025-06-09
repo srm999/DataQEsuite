@@ -69,8 +69,10 @@ class TestCase(db.Model):
     created_at = db.Column(db.DateTime, default=db.func.current_timestamp())
     updated_at = db.Column(db.DateTime, default=db.func.current_timestamp(), onupdate=db.func.current_timestamp())
     creator = db.relationship('User', foreign_keys=[creator_id])
+
     project_id = db.Column(db.Integer, db.ForeignKey('project.id'))
     project = db.relationship('Project', backref='test_cases')
+
 
 class TestExecution(db.Model):
     id = db.Column(db.Integer, primary_key=True)

@@ -35,6 +35,7 @@ apscheduler.schedulers.background.BackgroundScheduler.start = lambda self, *a, *
 from dataqe_app import create_app, db, login_manager
 from dataqe_app.models import Project, User, Connection, TestCase as TestCaseModel
 
+
 @login_manager.user_loader
 def load_user(user_id):
     return User.query.get(int(user_id))
@@ -70,12 +71,36 @@ def test_new_testcase_route(tmp_path):
         login(client, uid)
         # verify dropdown shows connections
         get_resp = client.get(f'/testcase/new?project_id={pid}')
+        team = Team(name='Team1')
+        db.session.add_all([project, team])
+        db.session.commit()
+        project.team_id = team.id
+
+        conn1 = Connection(name='SrcConn', project_id=project.id)
+        conn2 = Connection(name='TgtConn', project_id=project.id)
+        db.session.add_all([conn1, conn2])
+
+
+        user = User(username='u', email='u@example.com')
+        user.set_password('pwd')
+        user.team_id = team.id
+        db.session.add(user)
+        db.session.commit()
+        uid = user.id
+        tid = team.id
+
+    with app.test_client() as client:
+        login(client, uid)
+
+        # verify dropdown shows connections
+        get_resp = client.get(f'/testcase/new?team_id={tid}')
         assert get_resp.status_code == 200
         html = get_resp.data.decode()
         assert 'SrcConn' in html and 'TgtConn' in html
 
         resp = client.post(
             f'/testcase/new?project_id={pid}',
+
             data={
                 'tcid': 'TC1',
                 'tc_name': 'Test',
@@ -89,16 +114,29 @@ def test_new_testcase_route(tmp_path):
             },
             follow_redirects=True
         )
+
+
+        resp = client.post(f'/testcase/new?team_id={tid}', data={
+            'tcid': 'TC1',
+            'tc_name': 'Test',
+            'table_name': 'tbl',
+            'test_type': 'CCD_Validation',
+            'delimiter': ','
+        }, follow_redirects=True)
+
+
         assert resp.status_code == 200
         with app.app_context():
             tc = TestCaseModel.query.filter_by(tcid='TC1').first()
             assert tc is not None
             assert tc.project_id == pid
+
             src_path = project_folder / 'input' / tc.src_data_file
             tgt_path = project_folder / 'input' / tc.tgt_data_file
             assert src_path.exists() and tgt_path.exists()
             assert src_path.read_text() == 'select 1'
             assert tgt_path.read_text() == 'select 2'
+
 
 
 def test_edit_testcase_route(tmp_path):
@@ -118,6 +156,7 @@ def test_edit_testcase_route(tmp_path):
         project.users.append(user)
         db.session.add(user)
         db.session.commit()
+
         # existing file for query
         old_query = proj_folder / 'input' / 'old.sql'
         old_query.write_text('old src')
@@ -129,6 +168,12 @@ def test_edit_testcase_route(tmp_path):
             project_id=project.id,
             src_data_file='old.sql'
         )
+
+
+        tc = TestCaseModel(tcid='TC1', tc_name='Old', table_name='tbl', test_type='CCD_Validation', team_id=team.id)
+
+
+
         db.session.add(tc)
         db.session.commit()
         uid = user.id
@@ -150,6 +195,16 @@ def test_edit_testcase_route(tmp_path):
             },
             follow_redirects=True
         )
+
+
+        resp = client.post(f'/testcase/{tcid}/edit', data={
+            'tcid': 'TC1',
+            'tc_name': 'NewName',
+            'table_name': 'tbl2',
+            'test_type': 'CCD_Validation'
+        }, follow_redirects=True)
+
+
         assert resp.status_code == 200
         with app.app_context():
             updated = TestCaseModel.query.get(tcid)
@@ -179,6 +234,7 @@ def test_testcase_detail_route(tmp_path):
         project.users.append(user)
         db.session.add(user)
         tc = TestCaseModel(tcid='TC2', table_name='tbl', test_type='CCD_Validation', project_id=project.id)
+
         db.session.add(tc)
         db.session.commit()
         uid = user.id
@@ -191,4 +247,3 @@ def test_testcase_detail_route(tmp_path):
         html = resp.data.decode()
         assert 'Test Case Details' in html
         assert 'TC2' in html
-

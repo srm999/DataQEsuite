@@ -105,6 +105,40 @@ def create_app():
 
 
 
+    @app.route('/teams/<int:team_id>', endpoint='team_detail')
+    def team_detail(team_id):
+        team = Team.query.get_or_404(team_id)
+        test_cases = TestCase.query.filter_by(team_id=team_id).all()
+        users = team.users
+        available_users = User.query.filter(
+            or_(User.team_id.is_(None), User.team_id != team_id)
+        ).all()
+        return render_template(
+            'team_detail.html',
+            team=team,
+            test_cases=test_cases,
+            users=users,
+            available_users=available_users,
+        )
+
+    @app.route('/teams/<int:team_id>/add_member', methods=['POST'], endpoint='add_team_member')
+    def add_team_member(team_id):
+        user_id = request.form.get('user_id')
+        user = User.query.get_or_404(user_id)
+        user.team_id = team_id
+        db.session.commit()
+        flash('Member added successfully', 'success')
+        return redirect(url_for('team_detail', team_id=team_id))
+
+    @app.route('/teams/<int:team_id>/remove_member/<int:user_id>', methods=['POST'], endpoint='remove_team_member')
+    def remove_team_member(team_id, user_id):
+        user = User.query.get_or_404(user_id)
+        user.team_id = None
+        db.session.commit()
+        flash('Member removed', 'success')
+        return redirect(url_for('team_detail', team_id=team_id))
+
+
 
     @app.route('/users/<int:user_id>/edit', methods=['GET', 'POST'], endpoint='edit_user')
     @app.route('/users/<int:user_id>/edit', methods=['GET', 'POST'], endpoint='main.edit_user')
