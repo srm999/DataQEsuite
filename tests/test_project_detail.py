@@ -52,6 +52,7 @@ def test_project_detail_page():
 
 
     with app.app_context():
+        db.drop_all()
         db.create_all()
         project = Project(name='Demo Project', description='desc')
         db.session.add(project)
@@ -69,6 +70,7 @@ def test_project_detail_page():
 def test_add_member_route():
     app = create_app()
     with app.app_context():
+        db.drop_all()
         db.create_all()
         project = Project(name='Team Project')
         user = User(username='u', email='u@example.com')
@@ -88,6 +90,7 @@ def test_add_member_route():
 def test_new_connection_route():
     app = create_app()
     with app.app_context():
+        db.drop_all()
         db.create_all()
         project = Project(name='Conn Project')
         db.session.add(project)
@@ -105,6 +108,7 @@ def test_delete_project_route():
     app = create_app()
 
     with app.app_context():
+        db.drop_all()
         db.create_all()
         project = Project(name='Delete Me')
         db.session.add(project)

@@ -3,9 +3,9 @@ from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager
 from flask_mail import Mail
 from apscheduler.schedulers.background import BackgroundScheduler
-from sqlalchemy import or_, inspect
+from sqlalchemy import or_, inspect, text
 
-import os
+                db.session.execute(text('ALTER TABLE test_case ADD COLUMN project_id INTEGER'))
 
 # Initialize extensions
 db = SQLAlchemy()
