@@ -2,19 +2,20 @@ from dataqe_app import db
 from flask_login import UserMixin
 from werkzeug.security import generate_password_hash, check_password_hash
 
-class Team(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String(100), nullable=False)
-    project = db.relationship('Project', backref='team', uselist=False)
-    users = db.relationship('User', backref='team', lazy=True)
+# Association table linking projects and users
+project_user = db.Table(
+    'project_user',
+    db.Column('project_id', db.Integer, db.ForeignKey('project.id')),
+    db.Column('user_id', db.Integer, db.ForeignKey('user.id')),
+)
 
 class Project(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String(100), nullable=False)  # Add this
-    description = db.Column(db.Text, nullable=True)   # And this
+    name = db.Column(db.String(100), nullable=False)
+    description = db.Column(db.Text, nullable=True)
     folder_path = db.Column(db.String(255), nullable=True)
-    team_id = db.Column(db.Integer, db.ForeignKey('team.id'))
     connections = db.relationship('Connection', backref='project', lazy=True)
+    users = db.relationship('User', secondary=project_user, back_populates='projects')
 
 class Connection(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -32,8 +33,8 @@ class User(UserMixin, db.Model):
     username = db.Column(db.String(64), unique=True, nullable=False)
     email = db.Column(db.String(120), unique=True, nullable=False)
     password_hash = db.Column(db.String(128))
-    team_id = db.Column(db.Integer, db.ForeignKey('team.id'))
     is_admin = db.Column(db.Boolean, default=False)
+    projects = db.relationship('Project', secondary=project_user, back_populates='users')
 
     def set_password(self, password):
         self.password_hash = generate_password_hash(password)
@@ -58,7 +59,18 @@ class TestCase(db.Model):
     delimiter = db.Column(db.String(10))
     pk_columns = db.Column(db.String(255))
     date_fields = db.Column(db.String(255))
-    team_id = db.Column(db.Integer, db.ForeignKey('team.id'))
+    percentage_fields = db.Column(db.String(255))
+    threshold_percentage = db.Column(db.Float)
+    src_sheet_name = db.Column(db.String(255))
+    tgt_sheet_name = db.Column(db.String(255))
+    header_columns = db.Column(db.String(255))
+    skip_rows = db.Column(db.String(255))
+    creator_id = db.Column(db.Integer, db.ForeignKey('user.id'))
+    created_at = db.Column(db.DateTime, default=db.func.current_timestamp())
+    updated_at = db.Column(db.DateTime, default=db.func.current_timestamp(), onupdate=db.func.current_timestamp())
+    creator = db.relationship('User', foreign_keys=[creator_id])
+    project_id = db.Column(db.Integer, db.ForeignKey('project.id'))
+    project = db.relationship('Project', backref='test_cases')
 
 class TestExecution(db.Model):
     id = db.Column(db.Integer, primary_key=True)
