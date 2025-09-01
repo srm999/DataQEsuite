@@ -1,14 +1,7 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify
 from flask_login import login_required, current_user
 from dataqe_app import db
-from dataqe_app.models import (
-    TestCase,
-    ScheduledTest,
-    TestExecution,
-    TestMismatch,
-    User,
-    Project,
-)
+from dataqe_app.models import TestCase, ScheduledTest, TestExecution, TestMismatch, User, Project, Team
 from dataqe_app.utils.helpers import run_scheduled_test
 from datetime import datetime
 import os
@@ -130,15 +123,26 @@ def debug_last_execution():
 def new_testcase():
     """Create a new test case."""
     project_id = request.args.get('project_id') or request.form.get('project_id')
-    if not project_id:
+    team_id = request.args.get('team_id') or request.form.get('team_id')
+    team_id = int(team_id) if team_id else None
+    if not project_id and team_id:
+        team = Team.query.get_or_404(team_id)
+        project = team.project
+        project_id = project.id
+    elif project_id:
+        project = Project.query.get_or_404(project_id)
+    else:
         flash('Project not specified', 'error')
         return redirect(url_for('dashboard'))
 
-    project = Project.query.get_or_404(project_id)
-
     if not current_user.is_admin and current_user not in project.users:
-        flash('Access denied', 'error')
-        return redirect(url_for('dashboard'))
+        if project.team_id and current_user.team_id == project.team_id:
+            pass
+        elif team_id and current_user.team_id == team_id:
+            pass
+        else:
+            flash('Access denied', 'error')
+            return redirect(url_for('dashboard'))
 
     connections = project.connections
     form = TestCaseForm()
@@ -148,6 +152,76 @@ def new_testcase():
         os.makedirs(project_input_folder, exist_ok=True)
 
         tcid = form.tcid.data
+
+        test_case = TestCase(
+            tcid=tcid,
+            tc_name=tc_name,
+            table_name=table_name,
+            test_type=test_type,
+            test_yn=test_yn,
+            src_data_file=src_data_file,
+            tgt_data_file=tgt_data_file,
+            src_connection_id=src_conn_id,
+            tgt_connection_id=tgt_conn_id,
+            filters=filters,
+            delimiter=delimiter,
+            pk_columns=pk_columns,
+            date_fields=date_fields,
+            percentage_fields=percentage_fields,
+            threshold_percentage=threshold_percentage,
+            header_columns=header_columns,
+            skip_rows=skip_rows,
+            src_sheet_name=src_sheet_name,
+            tgt_sheet_name=tgt_sheet_name,
+            project_id=project.id,
+            team_id=team_id,
+            creator_id=current_user.id,
+        )
+        db.session.add(test_case)
+        db.session.commit()
+
+        flash('Test case created successfully', 'success')
+        return redirect(url_for('projects.project_detail', project_id=project.id))
+    return render_template('testcase_new.html', project=project, connections=connections)
+    return redirect(url_for('dashboard'))
+
+    project = Project.query.get_or_404(project_id)
+
+
+    if not current_user.is_admin and current_user not in project.users:
+        flash('Access denied', 'error')
+        return redirect(url_for('dashboard'))
+
+    connections = project.connections
+
+    if request.method == 'POST':
+        tcid = request.form.get('tcid')
+        table_name = request.form.get('table_name')
+        test_type = request.form.get('test_type')
+        tc_name = request.form.get('tc_name')
+        test_yn = 'Y' if request.form.get('test_yn') else 'N'
+        src_conn_id = request.form.get('src_connection_id') or None
+        tgt_conn_id = request.form.get('tgt_connection_id') or None
+        delimiter = request.form.get('delimiter')
+        filters = request.form.get('filters')
+        pk_columns = request.form.get('pk_columns')
+        date_fields = request.form.get('date_fields')
+        percentage_fields = request.form.get('percentage_fields')
+        threshold_percentage = request.form.get('threshold_percentage')
+        header_columns = request.form.get('header_columns')
+        skip_rows = request.form.get('skip_rows')
+        src_sheet_name = request.form.get('src_sheet_name')
+        tgt_sheet_name = request.form.get('tgt_sheet_name')
+        src_input_type = request.form.get('src_input_type')
+        tgt_input_type = request.form.get('tgt_input_type')
+        src_query = request.form.get('src_query')
+        tgt_query = request.form.get('tgt_query')
+
+        project_input_folder = os.path.join(project.folder_path, 'input')
+        os.makedirs(project_input_folder, exist_ok=True)
+
+        src_file = request.files.get('src_file')
+        tgt_file = request.files.get('tgt_file')
 
         src_data_file = None
         if form.src_input_type.data == 'query':
