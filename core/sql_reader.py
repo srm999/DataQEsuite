@@ -1,10 +1,14 @@
 import os
 import pandas as pd
-import pyodbc
 from typing import Optional, Union, Dict, Any
 from contextlib import contextmanager
-import datetime  
+import datetime
 import core.custom_logger as custom_logger
+
+try:  # pragma: no cover
+    import pyodbc  # type: ignore
+except Exception:  # ImportError or driver issues
+    pyodbc = None  # type: ignore
 
 class SQLFileReader:
     """
@@ -69,13 +73,13 @@ class SQLFileReader:
             exception: The exception that was raised
             query_info: Additional information about the query being executed
         """
-        # Handle pyodbc specific exceptions
-        if isinstance(exception, pyodbc.Error):
+        # Handle pyodbc specific exceptions when available
+        if pyodbc and isinstance(exception, pyodbc.Error):
             error_type = type(exception).__name__
             self.log.error(f"{error_type} occurred with query {query_info}: {str(exception)}")
-            
+
             # Only add warning for specific error types
-            if isinstance(exception, (pyodbc.OperationalError, pyodbc.DataError, 
+            if isinstance(exception, (pyodbc.OperationalError, pyodbc.DataError,
                                      pyodbc.IntegrityError, pyodbc.ProgrammingError)):
                 self.log.warning(f"Warning: {str(exception)}")
         else:
