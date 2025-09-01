@@ -153,7 +153,6 @@ def new_testcase():
 
         tcid = form.tcid.data
 
-
         test_case = TestCase(
             tcid=tcid,
             tc_name=tc_name,

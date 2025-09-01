@@ -1,6 +1,5 @@
 import logging
 import tempfile
-import pyodbc
 import os
 import re
 import ast
@@ -14,6 +13,11 @@ import pandas as pd
 from azure.storage.blob import BlobServiceClient
 import deltalake
 import yaml
+
+try:  # pragma: no cover
+    import pyodbc  # type: ignore
+except Exception:  # ImportError or driver issues
+    pyodbc = None  # type: ignore
 
 class MyAzureReader:
     
@@ -940,8 +944,8 @@ class MyAzureReader:
             pandas.DataFrame: The query results as a DataFrame
         """
         try:
-            import pyodbc
-            import pandas as pd
+            if pyodbc is None:
+                raise ImportError("pyodbc is required for Synapse queries")
             import struct
             from azure.identity import ClientSecretCredential
             from datetime import datetime
