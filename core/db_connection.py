@@ -1,6 +1,5 @@
 import os
 import sys
-import pyodbc
 from sqlalchemy import create_engine
 from sqlalchemy.engine import URL
 import urllib
@@ -10,13 +9,18 @@ from core.creds import Creds
 from snowflake import connector
 import core.custom_logger as custom_logger
 
+try:  # pragma: no cover - exercised via tests using monkeypatch
+    import pyodbc  # type: ignore
+except Exception:  # ImportError or driver issues
+    pyodbc = None  # type: ignore
+
 logger = custom_logger.customLogger()
 
 class DatabaseConnection:
     """Class for handling various database connections"""
     
     @staticmethod
-    def create_db_connection(server_name: str, database_name: str, autocommit: bool = True) -> pyodbc.Connection:
+    def create_db_connection(server_name: str, database_name: str, autocommit: bool = True) -> Any:
         """
         Create a connection to SQL Server using Windows authentication
         
@@ -31,6 +35,9 @@ class DatabaseConnection:
         Raises:
             ConnectionError: If connection cannot be established
         """
+        if pyodbc is None:
+            raise ImportError("pyodbc is required for SQL Server connections")
+
         try:
             connection_string = (
                 r"Driver={ODBC Driver 17 for SQL Server};"
@@ -38,15 +45,15 @@ class DatabaseConnection:
                 f"Database={database_name};"
                 "Trusted_Connection=yes;"
             )
-            
+
             # Disable connection pooling before establishing connection
             pyodbc.pooling = False
-            
+
             db_conn = pyodbc.connect(connection_string, autocommit=autocommit)
             logger.info("DB Connection established successfully")
             return db_conn
-            
-        except pyodbc.Error as e:
+
+        except Exception as e:
             error_msg = f"Failed to establish DB connection: {e}"
             logger.error(error_msg)
             raise ConnectionError(error_msg) from e
@@ -92,10 +99,10 @@ class DatabaseConnection:
     
     @staticmethod
     def sql_server_authentication(
-        server_name: str, 
-        database_name: str, 
+        server_name: str,
+        database_name: str,
         autocommit: bool = True
-    ) -> pyodbc.Connection:
+    ) -> Any:
         """
         Create a connection to SQL Server using SQL Server authentication
         
@@ -110,6 +117,9 @@ class DatabaseConnection:
         Raises:
             ConnectionError: If connection cannot be established
         """
+        if pyodbc is None:
+            raise ImportError("pyodbc is required for SQL Server connections")
+
         try:
             connection_string = (
                 r"Driver={ODBC Driver 17 for SQL Server};"
@@ -119,15 +129,15 @@ class DatabaseConnection:
                 f"PWD={Creds.db_password.value};"
                 "Trusted_Connection=no;"
             )
-            
+
             # Disable connection pooling before establishing connection
             pyodbc.pooling = False
-            
+
             db_conn = pyodbc.connect(connection_string, autocommit=autocommit)
             logger.info("SQL server connection established successfully")
             return db_conn
-            
-        except pyodbc.Error as e:
+
+        except Exception as e:
             error_msg = f"Failed to establish SQL server connection: {e}"
             logger.error(error_msg)
             raise ConnectionError(error_msg) from e
@@ -287,6 +297,9 @@ class DatabaseConnection:
 
     def mssql_engine(server_name: str, database_name: str):
 
+        if pyodbc is None:
+            raise ImportError("pyodbc is required for SQL Server connections")
+
         try:
             connection_string = (
                 r"Driver={ODBC Driver 17 for SQL Server};"
@@ -299,12 +312,15 @@ class DatabaseConnection:
             conn = engine.connect().execution_options(stream_results=True)
             logger.info("DB engine created successfully")
             return conn
-        except pyodbc.Error as e:
+        except Exception as e:
             error_msg = f"Failed to create a DB engine: {e}"
             logger.error(error_msg)
             raise ConnectionError(error_msg) from e
         
     def synapse_engine(server_name: str, database_name: str):
+
+        if pyodbc is None:
+            raise ImportError("pyodbc is required for SQL Server connections")
 
         try:
             connection_string = (
@@ -320,18 +336,19 @@ class DatabaseConnection:
             conn = engine.connect().execution_options(stream_results=True)
             logger.info("Synapse engine created successfully")
             return conn
-        except pyodbc.Error as e:
+        except Exception as e:
             error_msg = f"Failed to create a Synapse engine: {e}"
             logger.error(error_msg)
             raise ConnectionError(error_msg) from e
         
     def synapse_engine_service_principal(server_name: str, database_name: str, client_id: str, client_secret: str, tenant_id: str):
         try:
-            import pyodbc
+            if pyodbc is None:
+                raise ImportError("pyodbc is required for SQL Server connections")
             import urllib.parse
             import logging
             import os
-            
+
             # Create connection string with Service Principal authentication
             connection_string = (
                 f"Driver={{ODBC Driver 17 for SQL Server}};"
@@ -341,15 +358,15 @@ class DatabaseConnection:
                 f"UID={client_id};"
                 f"PWD={client_secret};"
             )
-            
+
             # Create SQLAlchemy engine
             params = urllib.parse.quote_plus(connection_string)
             engine = create_engine(f'mssql+pyodbc:///?odbc_connect={params}')
             conn = engine.connect().execution_options(stream_results=True)
-            
+
             logging.info("Synapse engine created successfully using Service Principal")
             return conn
-        except pyodbc.Error as e:
+        except Exception as e:
             error_msg = f"Failed to create a Synapse engine: {e}"
             logging.error(error_msg)
             raise ConnectionError(error_msg) from e
