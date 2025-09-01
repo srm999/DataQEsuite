@@ -73,7 +73,6 @@ def setup_project(tmp_path):
         pid = project.id
     return app, project_folder, uid, pid
 
-
 def test_new_testcase_route_saves_queries(tmp_path):
     app, project_folder, uid, pid = setup_project(tmp_path)
     with app.test_client() as client:
@@ -127,6 +126,30 @@ def test_new_testcase_requires_pk(tmp_path):
         assert resp.status_code == 200
     with app.app_context():
         assert TestCaseModel.query.filter_by(tcid='TC2').first() is None
+
+
+
+def test_new_testcase_requires_name(tmp_path):
+    app, project_folder, uid, pid = setup_project(tmp_path)
+    with app.test_client() as client:
+        login(client, uid)
+        resp = client.post(
+            f'/testcase/new?project_id={pid}',
+            data={
+                'tcid': 'TC3',
+                'table_name': 'tbl',
+                'test_type': 'CCD_Validation',
+                'pk_columns': 'id',
+                'src_input_type': 'query',
+                'src_query': 'select 1',
+                'tgt_input_type': 'query',
+                'tgt_query': 'select 2'
+            },
+            follow_redirects=True
+        )
+        assert resp.status_code == 200
+    with app.app_context():
+        assert TestCaseModel.query.filter_by(tcid='TC3').first() is None
 
 
 def test_edit_testcase_overwrites_sql(tmp_path):
