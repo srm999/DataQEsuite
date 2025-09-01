@@ -1,7 +1,7 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify, current_app
 from flask_login import login_required, current_user
 from dataqe_app import db
-from dataqe_app.models import TestCase, ScheduledTest, TestExecution, TestMismatch, User, Project
+from dataqe_app.models import TestCase, ScheduledTest, TestExecution, TestMismatch, User, Project, Team
 from dataqe_app.utils.helpers import run_scheduled_test
 from datetime import datetime
 import os
@@ -126,15 +126,26 @@ def debug_last_execution():
 def new_testcase():
     """Create a new test case."""
     project_id = request.args.get('project_id') or request.form.get('project_id')
-    if not project_id:
+    team_id = request.args.get('team_id') or request.form.get('team_id')
+    team_id = int(team_id) if team_id else None
+    if not project_id and team_id:
+        team = Team.query.get_or_404(team_id)
+        project = team.project
+        project_id = project.id
+    elif project_id:
+        project = Project.query.get_or_404(project_id)
+    else:
         flash('Project not specified', 'error')
         return redirect(url_for('dashboard'))
 
-    project = Project.query.get_or_404(project_id)
-
     if not current_user.is_admin and current_user not in project.users:
-        flash('Access denied', 'error')
-        return redirect(url_for('dashboard'))
+        if project.team_id and current_user.team_id == project.team_id:
+            pass
+        elif team_id and current_user.team_id == team_id:
+            pass
+        else:
+            flash('Access denied', 'error')
+            return redirect(url_for('dashboard'))
 
     connections = project.connections
 
@@ -209,6 +220,7 @@ def new_testcase():
             src_sheet_name=src_sheet_name,
             tgt_sheet_name=tgt_sheet_name,
             project_id=project.id,
+            team_id=team_id,
             creator_id=current_user.id,
         )
         db.session.add(test_case)

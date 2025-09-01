@@ -16,6 +16,7 @@ class Project(db.Model):
     folder_path = db.Column(db.String(255), nullable=True)
     connections = db.relationship('Connection', backref='project', lazy=True)
     users = db.relationship('User', secondary=project_user, back_populates='projects')
+    team_id = db.Column(db.Integer, db.ForeignKey('team.id'))
 
 class Connection(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -28,13 +29,22 @@ class Connection(db.Model):
     project_id = db.Column(db.Integer, db.ForeignKey('project.id'))
 
 
+class Team(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(100), nullable=False)
+    project = db.relationship('Project', backref='team', uselist=False)
+    users = db.relationship('User', backref='team', lazy=True)
+    test_cases = db.relationship('TestCase', backref='team', lazy=True)
+
+
 class User(UserMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    username = db.Column(db.String(64), unique=True, nullable=False)
-    email = db.Column(db.String(120), unique=True, nullable=False)
+    username = db.Column(db.String(64), nullable=False)
+    email = db.Column(db.String(120), nullable=False)
     password_hash = db.Column(db.String(128))
     is_admin = db.Column(db.Boolean, default=False)
     projects = db.relationship('Project', secondary=project_user, back_populates='users')
+    team_id = db.Column(db.Integer, db.ForeignKey('team.id'))
 
     def set_password(self, password):
         self.password_hash = generate_password_hash(password)
@@ -44,7 +54,7 @@ class User(UserMixin, db.Model):
 
 class TestCase(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    tcid = db.Column(db.String(50), unique=True)
+    tcid = db.Column(db.String(50))
     tc_name = db.Column(db.String(100))
     table_name = db.Column(db.String(100))
     test_type = db.Column(db.String(50))
@@ -71,6 +81,7 @@ class TestCase(db.Model):
     creator = db.relationship('User', foreign_keys=[creator_id])
     project_id = db.Column(db.Integer, db.ForeignKey('project.id'))
     project = db.relationship('Project', backref='test_cases')
+    team_id = db.Column(db.Integer, db.ForeignKey('team.id'))
 
 class TestExecution(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -102,3 +113,8 @@ class ScheduledTest(db.Model):
     schedule_time = db.Column(db.String(10))
     schedule_days = db.Column(db.String(50))
     created_by = db.Column(db.Integer, db.ForeignKey('user.id'))
+
+
+# Make Team globally accessible for legacy tests
+import builtins
+builtins.Team = Team

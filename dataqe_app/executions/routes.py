@@ -1,8 +1,10 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify, send_file
 from flask_login import login_required, current_user
 from sqlalchemy import func
+from datetime import datetime
 from dataqe_app import db
 from dataqe_app.models import TestCase, TestExecution, TestMismatch
+from dataqe_app.executions.service import ExecutionService
 import os
 
 executions_bp = Blueprint('executions', __name__)
@@ -44,6 +46,34 @@ def execution_history():
         )
 
     return render_template('execution_history.html', executions=executions)
+
+
+@executions_bp.route('/api/execute/<int:test_case_id>', methods=['POST'])
+@login_required
+def api_execute(test_case_id):
+    """Execute a test case immediately via AJAX."""
+    test_case = TestCase.query.get_or_404(test_case_id)
+    if not current_user.is_admin and test_case.project not in current_user.projects:
+        return jsonify({'error': 'Access denied'}), 403
+
+    service = ExecutionService()
+    execution = service.run_test_case(test_case_id, executed_by=current_user.id)
+    return jsonify({'execution_id': execution.id, 'status': execution.status})
+
+
+@executions_bp.route('/api/schedule/<int:test_case_id>', methods=['POST'])
+@login_required
+def api_schedule(test_case_id):
+    """Schedule a test case for later execution."""
+    test_case = TestCase.query.get_or_404(test_case_id)
+    if not current_user.is_admin and test_case.project not in current_user.projects:
+        return jsonify({'error': 'Access denied'}), 403
+
+    run_at = request.form.get('run_at')
+    run_time = datetime.fromisoformat(run_at) if run_at else datetime.utcnow()
+    service = ExecutionService()
+    service.schedule_test_case(test_case_id, run_time)
+    return jsonify({'scheduled': True, 'run_at': run_time.isoformat()})
 
 
 @executions_bp.route('/results-dashboard')
