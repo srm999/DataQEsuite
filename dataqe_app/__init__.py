@@ -11,8 +11,10 @@ db = SQLAlchemy()
 login_manager = LoginManager()
 mail = Mail()
 background_scheduler = BackgroundScheduler()
+# Alias used by other modules
+scheduler = background_scheduler
 
-from dataqe_app.models import User, Project, TestCase
+from dataqe_app.models import User, Project, TestCase, Team
 
 
 def create_app():

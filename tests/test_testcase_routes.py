@@ -73,7 +73,6 @@ def setup_project(tmp_path):
         pid = project.id
     return app, project_folder, uid, pid
 
-
 def test_new_testcase_route_saves_queries(tmp_path):
     app, project_folder, uid, pid = setup_project(tmp_path)
     with app.test_client() as client:
@@ -127,6 +126,7 @@ def test_new_testcase_requires_pk(tmp_path):
         assert resp.status_code == 200
     with app.app_context():
         assert TestCaseModel.query.filter_by(tcid='TC2').first() is None
+
 
 
 def test_new_testcase_requires_name(tmp_path):
